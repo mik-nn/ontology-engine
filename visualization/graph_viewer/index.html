@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ontology Engine — Graph Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/vis-network.min.js"></script>
+  <link  href="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/vis-network.min.css" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+           background: #1e1e1e; color: #d4d4d4; height: 100vh;
+           display: flex; flex-direction: column; }
+
+    #header { padding: 10px 16px; background: #252526; border-bottom: 1px solid #333;
+              display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+    #header h1 { font-size: 15px; font-weight: 600; color: #4e9af1; letter-spacing:.5px; }
+    #stats { font-size: 12px; color: #888; }
+
+    #controls { padding: 8px 16px; background: #2d2d2d; border-bottom: 1px solid #333;
+                display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+    #controls label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    #controls input[type=checkbox] { accent-color: #4e9af1; }
+    #controls input[type=text] { background: #1e1e1e; border: 1px solid #444; color: #d4d4d4;
+                                  padding: 3px 8px; border-radius: 4px; font-size: 12px; width: 180px; }
+    #controls button { background: #0e639c; border: none; color: #fff; padding: 4px 12px;
+                       border-radius: 4px; font-size: 12px; cursor: pointer; }
+    #controls button:hover { background: #1177bb; }
+    .sep { width: 1px; background: #444; height: 20px; }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #graph { flex: 1; }
+    #sidebar { width: 280px; background: #252526; border-left: 1px solid #333;
+               overflow-y: auto; padding: 12px; flex-shrink: 0; display: none; }
+    #sidebar.visible { display: block; }
+    #sidebar h2 { font-size: 13px; color: #4e9af1; margin-bottom: 8px; }
+    #sidebar p  { font-size: 11px; color: #aaa; line-height: 1.5; word-break: break-all; }
+    #sidebar .prop { margin-bottom: 6px; }
+    #sidebar .prop-key { color: #888; font-size: 10px; text-transform: uppercase; }
+    #sidebar .prop-val { color: #d4d4d4; font-size: 12px; }
+
+    #legend { padding: 8px 16px; background: #252526; border-top: 1px solid #333;
+              display: flex; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+    .legend-dot  { width: 10px; height: 10px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Ontology Engine — Graph Viewer</h1>
+  <span id="stats">Loading…</span>
+</div>
+
+<div id="controls">
+  <input type="text" id="search" placeholder="Search nodes…" />
+  <div class="sep"></div>
+  <strong style="font-size:12px">Groups:</strong>
+  <div id="group-filters"></div>
+  <div class="sep"></div>
+  <button onclick="resetView()">Reset view</button>
+  <button onclick="toggleSidebar()">Panel</button>
+</div>
+
+<div id="main">
+  <div id="graph"></div>
+  <div id="sidebar">
+    <h2 id="sb-title">Node details</h2>
+    <div id="sb-body"></div>
+  </div>
+</div>
+
+<div id="legend" id="legend"></div>
+
+<script>
+const GRAPH_JSON = "../../logs/graphs/graph.json";
+
+const GROUP_COLORS = {
+  module:   "#4e9af1",
+  code:     "#b8d4f8",
+  planning: "#f4a261",
+  data:     "#2a9d8f",
+  project:  "#e76f51",
+  deps:     "#8ecae6",
+  events:   "#cccccc",
+  other:    "#888888",
+};
+
+let network, allNodes, allEdges, nodeDataset, edgeDataset;
+let activeGroups = new Set();
+
+async function init() {
+  let data;
+  try {
+    const resp = await fetch(GRAPH_JSON);
+    if (!resp.ok) throw new Error(resp.statusText);
+    data = await resp.json();
+  } catch (e) {
+    document.getElementById("stats").textContent =
+      "⚠ Could not load graph.json — run pipeline/visualize.py first.";
+    return;
+  }
+
+  allNodes = data.nodes;
+  allEdges = data.edges;
+
+  document.getElementById("stats").textContent =
+    `${allNodes.length} nodes · ${allEdges.length} edges`;
+
+  buildGroupFilters(data.groups);
+  buildLegend(data.groups);
+  renderGraph();
+}
+
+function buildGroupFilters(groups) {
+  const wrap = document.getElementById("group-filters");
+  groups.forEach(g => {
+    activeGroups.add(g);
+    const lbl = document.createElement("label");
+    const cb  = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = true;
+    cb.style.accentColor = GROUP_COLORS[g] || "#888";
+    cb.addEventListener("change", () => {
+      cb.checked ? activeGroups.add(g) : activeGroups.delete(g);
+      applyFilters();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(" " + g));
+    wrap.appendChild(lbl);
+  });
+}
+
+function buildLegend(groups) {
+  const leg = document.getElementById("legend");
+  groups.forEach(g => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<div class="legend-dot" style="background:${GROUP_COLORS[g]||'#888'}"></div>${g}`;
+    leg.appendChild(item);
+  });
+}
+
+function renderGraph() {
+  const visNodes = allNodes.map(n => ({
+    id:    n.id,
+    label: n.label,
+    title: n.title,
+    color: { background: n.color, border: darken(n.color), highlight: { background: "#fff", border: "#4e9af1" } },
+    shape: visShape(n.shape),
+    group: n.group,
+    font:  { color: "#e0e0e0", size: 11 },
+    _type: n.type,
+    _group: n.group,
+  }));
+
+  const visEdges = allEdges.map((e, i) => ({
+    id:     i,
+    from:   e.from,
+    to:     e.to,
+    label:  e.label,
+    arrows: "to",
+    color:  { color: "#555", highlight: "#4e9af1" },
+    font:   { color: "#888", size: 9, align: "middle" },
+    width:  1,
+  }));
+
+  nodeDataset = new vis.DataSet(visNodes);
+  edgeDataset = new vis.DataSet(visEdges);
+
+  const container = document.getElementById("graph");
+  network = new vis.Network(container, { nodes: nodeDataset, edges: edgeDataset }, {
+    layout: { improvedLayout: true },
+    physics: {
+      stabilization: { iterations: 200 },
+      barnesHut: { gravitationalConstant: -8000, springLength: 120, damping: 0.1 },
+    },
+    interaction: { tooltipDelay: 200, navigationButtons: true, keyboard: true },
+  });
+
+  network.on("click", params => {
+    if (params.nodes.length === 0) { hideSidebar(); return; }
+    const nid = params.nodes[0];
+    const n = allNodes.find(x => x.id === nid);
+    if (n) showSidebar(n);
+  });
+
+  network.on("stabilizationIterationsDone", () => network.fit());
+}
+
+function applyFilters() {
+  const query = document.getElementById("search").value.toLowerCase();
+  const visible = allNodes.filter(n =>
+    activeGroups.has(n.group) &&
+    (!query || n.label.toLowerCase().includes(query) || n.type.toLowerCase().includes(query))
+  );
+  const visibleIds = new Set(visible.map(n => n.id));
+  nodeDataset.update(allNodes.map(n => ({ id: n.id, hidden: !visibleIds.has(n.id) })));
+  edgeDataset.update(allEdges.map((e, i) => ({
+    id: i,
+    hidden: !visibleIds.has(e.from) || !visibleIds.has(e.to),
+  })));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("search").addEventListener("input", applyFilters);
+});
+
+function resetView() { network && network.fit(); }
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("visible");
+}
+
+function showSidebar(n) {
+  const sb = document.getElementById("sidebar");
+  sb.classList.add("visible");
+  document.getElementById("sb-title").textContent = n.label;
+  document.getElementById("sb-body").innerHTML = `
+    <div class="prop"><div class="prop-key">Type</div><div class="prop-val">${n.type}</div></div>
+    <div class="prop"><div class="prop-key">Group</div><div class="prop-val">${n.group}</div></div>
+    <div class="prop"><div class="prop-key">URI</div><div class="prop-val">${n.id}</div></div>
+    ${n.title ? `<div class="prop"><div class="prop-key">Details</div><div class="prop-val">${n.title}</div></div>` : ""}
+  `;
+}
+
+function hideSidebar() {
+  document.getElementById("sidebar").classList.remove("visible");
+}
+
+function visShape(s) {
+  return { box: "box", ellipse: "ellipse", diamond: "diamond",
+           database: "database", star: "star", dot: "dot" }[s] || "dot";
+}
+
+function darken(hex) {
+  if (!hex || hex[0] !== "#") return "#333";
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.max(0, (n >> 16) - 30);
+  const g = Math.max(0, ((n >> 8) & 0xff) - 30);
+  const b = Math.max(0, (n & 0xff) - 30);
+  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+init();
+</script>
+</body>
+</html>

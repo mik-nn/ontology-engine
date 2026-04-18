@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from storage.graph_store import GraphStore
 from pipeline.event_logger import EventLogger
-from pipeline.graph_updater import GraphUpdater
 from pipeline.git_client import GitClient
 from pipeline.doc_sync import DocSync
 
@@ -40,10 +39,12 @@ GRAPH_EXECUTED   = "logs/graphs/executed.trig"
 class PipelineState(Enum):
     IDLE          = "idle"
     INTROSPECTING = "introspecting"
+    INTERVIEWING  = "interviewing"
     VERIFYING     = "verifying"
     PLANNING      = "planning"
     EXECUTING     = "executing"
     SYNCING       = "syncing"
+    VISUALIZING   = "visualizing"
     COMPLETED     = "completed"
     FAILED        = "failed"
 
@@ -92,10 +93,12 @@ class PipelineOrchestrator:
 
         transitions = [
             (PipelineState.INTROSPECTING, self._stage_introspect),
+            (PipelineState.INTERVIEWING,  self._stage_interview),
             (PipelineState.VERIFYING,     self._stage_verify),
             (PipelineState.PLANNING,      self._stage_plan),
             (PipelineState.EXECUTING,     self._stage_execute),
             (PipelineState.SYNCING,       self._stage_sync),
+            (PipelineState.VISUALIZING,   self._stage_visualize),
         ]
 
         for state, handler in transitions:
@@ -141,19 +144,17 @@ class PipelineOrchestrator:
         from introspection.project_scanner import ProjectScanner
         from introspection.code_parser import CodeParser
         from introspection.doc_parser import DocParser
-        from verification.rule_engine import RuleEngine
 
-        scanner = ProjectScanner(self.store)
+        scanner = ProjectScanner(self.store, project_root=".")
         scanner.scan()
         self._print(f"  Scanned: {self.store}")
 
-        CodeParser(self.store).parse_all()
-        DocParser(self.store).parse_all()
+        CodeParser(self.store, project_root=".").parse_all()
+        DocParser(self.store, project_root=".").parse_all()
 
-        report = self.store.validate(SHAPES)
-        if report.violations:
-            for v in report.violations:
-                self._print(f"  [SHACL] {v.message}")
+        conforms, shacl_text = self.store.validate(SHAPES)
+        if not conforms:
+            self._print(f"  [SHACL] {shacl_text[:200]}")
 
         self.store.save(GRAPH_INTROSPECT)
         run.graph_path = GRAPH_INTROSPECT
@@ -164,6 +165,32 @@ class PipelineOrchestrator:
             agent="PipelineOrchestrator",
             status="completed",
             outputPath=GRAPH_INTROSPECT,
+        )
+
+    def _stage_interview(self, run: PipelineRun) -> None:
+        from interaction.interviewer import Interviewer
+
+        if run.graph_path:
+            self.store.load(run.graph_path)
+
+        if self.auto:
+            self._print("  --auto: skipping interview.")
+            return
+
+        interviewer = Interviewer(self.store)
+        session = interviewer.run()
+        self._print(f"  {session.summary()}")
+
+        if session.gaps_closed > 0:
+            self.store.save(GRAPH_INTROSPECT)
+            run.graph_path = GRAPH_INTROSPECT
+            self._print(f"  Updated → {GRAPH_INTROSPECT}")
+
+        self.logger.log(
+            "UserAnswerReceived",
+            agent="PipelineOrchestrator",
+            status="completed",
+            gapsClosed=str(session.gaps_closed),
         )
 
     def _stage_verify(self, run: PipelineRun) -> None:
@@ -181,8 +208,8 @@ class PipelineOrchestrator:
         self._print(rule_report.summary())
 
         if rule_report.violations and not self.auto:
-            cli = VerifyCLI(self.store, engine)
-            cli.run(rule_report)
+            cli = VerifyCLI(self.store, rule_report)
+            cli.run()
 
         self.store.save(GRAPH_VERIFIED)
         run.graph_path = GRAPH_VERIFIED
@@ -230,7 +257,6 @@ class PipelineOrchestrator:
         from planning.plan_executor import PlanExecutor
         from verification.rule_engine import RuleEngine
 
-        updater = GraphUpdater(self.store, self.logger, SHAPES)
         executor = PlanExecutor(self.store, verbose=self.verbose)
 
         exec_report = executor.execute(self._spec)
@@ -279,6 +305,22 @@ class PipelineOrchestrator:
     # ──────────────────────────────────────────────
     # Helpers
     # ──────────────────────────────────────────────
+
+    def _stage_visualize(self, run: PipelineRun) -> None:
+        from visualization.graph_exporter import export_json, export_dot
+
+        eg = export_json(self.store, "logs/graphs/graph.json")
+        export_dot(self.store, "logs/graphs/graph.dot")
+        self._print(f"  Exported {len(eg.nodes)} nodes, {len(eg.edges)} edges")
+        self._print("  Viewer → visualization/graph_viewer/index.html")
+
+        self.logger.log(
+            "DocumentationSynced",
+            agent="PipelineOrchestrator",
+            status="visualized",
+            nodeCount=str(len(eg.nodes)),
+            edgeCount=str(len(eg.edges)),
+        )
 
     def _print(self, msg: str) -> None:
         if self.verbose:

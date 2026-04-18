@@ -48,12 +48,12 @@ class DocSync:
     def _find_databooks(self) -> list[URIRef]:
         from rdflib import RDF
         uris = []
-        for s in self.store.graph.subjects(RDF.type, DB.Databook):
+        for s in self.store._g.subjects(RDF.type, DB.Databook):
             uris.append(s)
         return uris
 
     def _sync_databook(self, uri: URIRef) -> Optional[str]:
-        g = self.store.graph
+        g = self.store._g
 
         def val(pred):
             v = g.value(uri, pred)
