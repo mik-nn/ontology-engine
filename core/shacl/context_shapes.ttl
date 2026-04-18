@@ -1,0 +1,35 @@
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix oe:  <https://ontologist.ai/ns/oe/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ContextPacket logged to the pipeline interior graph after every build.
+oe:ContextPacketShape
+    a sh:NodeShape ;
+    sh:targetClass oe:ContextPacket ;
+
+    sh:property [
+        sh:path oe:anchorUri ;
+        sh:minCount 1 ;
+        sh:message "ContextPacket must reference an anchor URI." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:tokenEstimate ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "ContextPacket must carry a token estimate." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:tripleCount ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "ContextPacket must record the number of triples." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:depthUsed ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "ContextPacket must declare the BFS depth used." ;
+    ] .

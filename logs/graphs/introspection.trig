@@ -1,0 +1,1685 @@
+@prefix build: <https://ontologist.ai/ns/build#> .
+@prefix cga: <https://ontologist.ai/ns/cga/> .
+@prefix db: <https://ontologist.ai/ns/databook#> .
+@prefix oe: <https://ontologist.ai/ns/oe/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://ontologist.ai/ns/oe/module/claude-settings-local-json/interior> {
+    <https://ontologist.ai/ns/oe/module/claude-settings-local-json> oe:fileExt ".json" ;
+        oe:fileName "settings.local.json" ;
+        oe:filePath ".claude/settings.local.json" ;
+        oe:fileSizeBytes 97 .
+}
+
+<https://ontologist.ai/ns/oe/module/core-rules-rules-ttl/context> {
+    <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl/context> {
+    <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/context> {
+    <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-rule-engine-py/context> {
+    <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/verification-rule-engine-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/verification-rule-engine-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/verification-rule-engine-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/verification-rule-engine-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl/context> {
+    <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/interior> {
+    <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md> db:authorIRI <https://ontologist.ai/agents/michael> ;
+        db:authorName "Michael" ;
+        db:content """databook:
+  id: adr_001
+  title: "ADR-001: LLM as Atomic Executor Only"
+  version: 1.0.0
+  type: adr
+  domain: ontology-engine
+  status: accepted
+  created: 2026-04-18
+  updated: 2026-04-18
+  author:
+    - name: Michael
+      iri: https://ontologist.ai/agents/michael
+  process:
+    transformer: human
+    inputs: []
+  license: CC-BY-4.0
+  tags:
+    - adr
+    - llm
+    - architecture
+---
+# ADR-001: LLM as Atomic Executor Only
+
+**Status:** Accepted
+
+## Context
+
+Building AI-assisted pipelines risks "LLM sprawl" — where the model makes orchestration decisions, decides next steps, manages state, and pushes to external systems. This creates unpredictable, hard-to-audit behavior.
+
+## Decision
+
+LLMs in this engine are **atomic task executors only**:
+- They receive a fully-formed, SHACL-validated context packet
+- They return a structured, schema-bound result
+- They never see the graph directly, never decide next steps, never call tools autonomously
+- All orchestration is done by deterministic Python agents reading ontology state
+
+## Consequences
+
+- Every LLM call is auditable: input context and output result are both logged as RDF events
+- Pipeline is reproducible: same graph state + same rules → same plan
+- LLM can be swapped (GPT-4 → Claude → local model) without changing orchestration logic
+- Debugging is easier: when something goes wrong, the cause is in the graph or rules, not an LLM chain""" ;
+        db:created "2026-04-18" ;
+        db:id "adr_001" ;
+        db:license "CC-BY-4.0" ;
+        db:title "ADR-001: LLM as Atomic Executor Only" ;
+        db:transformer "human" ;
+        db:type "adr" ;
+        db:version "1.0.0" ;
+        oe:fileExt ".md" ;
+        oe:fileName "001-llm-as-executor-only.md" ;
+        oe:filePath "docs/adr/001-llm-as-executor-only.md" ;
+        oe:fileSizeBytes 1416 .
+}
+
+<https://ontologist.ai/ns/oe/module/core-rules-rules-ttl/interior> {
+    <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl> oe:fileExt ".ttl" ;
+        oe:fileName "rules.ttl" ;
+        oe:filePath "core/rules/rules.ttl" ;
+        oe:fileSizeBytes 6787 .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-code-parser-py/interior> {
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-codeparser> a oe:CodeClass ;
+        oe:className "CodeParser" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:lineNumber 15 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-emit-class> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:functionName "_emit_class" ;
+        oe:lineNumber 86 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-emit-function> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:functionName "_emit_function" ;
+        oe:lineNumber 77 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-emit-import> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:functionName "_emit_import" ;
+        oe:lineNumber 95 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-init> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:functionName "__init__" ;
+        oe:lineNumber 26 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-parse-all> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:functionName "parse_all" ;
+        oe:lineNumber 30 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-code-parser-py-parse-file> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> ;
+        oe:functionName "_parse_file",
+            "parse_file" ;
+        oe:lineNumber 40,
+            43 .
+
+    <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> oe:dependsOn build:ast,
+            build:pathlib,
+            build:rdflib,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store>,
+            <https://ontologist.ai/ns/oe/module/storage-id-manager> ;
+        oe:fileExt ".py" ;
+        oe:fileName "code_parser.py" ;
+        oe:filePath "introspection/code_parser.py" ;
+        oe:fileSizeBytes 4439 .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-implementationplan-md/context> {
+    <https://ontologist.ai/ns/oe/module/docs-implementationplan-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/docs-implementationplan-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/docs-implementationplan-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/docs-implementationplan-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/docs-implementationplan-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py/context> {
+    <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/interior> {
+    <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md> db:authorIRI <https://ontologist.ai/agents/michael> ;
+        db:authorName "Michael" ;
+        db:content """databook:
+  id: implementation_plan
+  title: "Implementation Plan for Ontology Engine"
+  version: 1.0.0
+  type: architecture
+  domain: ontology-engine
+  status: draft
+  created: 2026-04-18
+  updated: 2026-04-18
+  author:
+    - name: Michael
+      iri: https://ontologist.ai/agents/michael
+  process:
+    transformer: human
+    inputs: []
+  license: CC-BY-4.0
+  tags:
+    - ontology
+    - architecture
+    - pipeline
+    - planning
+    - shacl
+    - reasoning
+---
+# 📘 Implementation Plan (Техническое Задание)
+## Онтологический Движок для Построения, Обогащения, Верификации и Планирования Проектов
+
+---
+
+# 1. Цель системы
+
+Создать онтологический движок, который:
+
+1. Строит онтологию проекта на основе:
+   - запроса пользователя,
+   - структуры существующего проекта,
+   - данных из интернета (Tawily),
+   - интерактивного интервьюирования.
+
+2. Обогащает онтологию:
+   - автоматически (reasoning, правила, SHACL),
+   - внешними знаниями,
+   - пользовательскими ответами.
+
+3. Проверяет онтологию:
+   - автоматически (SHACL 1.2),
+   - вручную (пользовательская верификация).
+
+4. Формирует непротиворечивые, полные и не избыточные контексты для LLM.
+
+5. Визуализирует граф знаний (read‑only на первом этапе).
+
+6. Выполняет планирование и декомпозицию сложных запросов до атомарных задач.
+
+7. **Формирует pipeline исключительно на основе логики онтологии**, а не LLM.
+
+8. **LLM используется только как исполнитель атомарных задач**, но не как управляющий компонент.
+
+---
+
+# 2. Общая архитектура
+
+core/  
+  ontology/  
+  shacl/  
+  rules/  
+
+introspection/  
+  project_scanner.py  
+  code_parser.py  
+  doc_parser.py  
+
+enrichment/  
+  tawily_client.py  
+  external_mapper.py  
+
+interaction/  
+  interviewer.py  
+  user_feedback.py  
+
+verification/  
+  shacl_validator.py  
+  rule_engine.py  
+
+context/  
+  context_builder.py  
+  context_pruner.py  
+  context_explainer.py  
+
+planning/  
+  task_classifier.py  
+  task_decomposer.py  
+  task_planner.py  
+  plan_executor.py  
+
+pipeline/  
+  pipeline_orches""" ;
+        db:created "2026-04-18" ;
+        db:id "implementation_plan" ;
+        db:license "CC-BY-4.0" ;
+        db:title "Implementation Plan for Ontology Engine" ;
+        db:transformer "human" ;
+        db:type "architecture" ;
+        db:version "1.0.0" ;
+        oe:fileExt ".md" ;
+        oe:fileName "ImplementationPlan.md" ;
+        oe:filePath "docs/databooks/ImplementationPlan.md" ;
+        oe:fileSizeBytes 12300 .
+}
+
+<https://ontologist.ai/ns/oe/project/ontology-engine/context> {
+    <https://ontologist.ai/ns/oe/project/ontology-engine> a oe:ProjectHolon ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/project/ontology-engine/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/project/ontology-engine/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/project/ontology-engine/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/project/ontology-engine/projection> .
+}
+
+<https://ontologist.ai/ns/oe/module/readme-md/context> {
+    <https://ontologist.ai/ns/oe/module/readme-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/readme-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/readme-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/readme-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/readme-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-doc-parser-py/context> {
+    <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-implementationplan-md/interior> {
+    <https://ontologist.ai/ns/oe/module/docs-implementationplan-md> db:content "" ;
+        db:title "ImplementationPlan" ;
+        oe:fileExt ".md" ;
+        oe:fileName "ImplementationPlan.md" ;
+        oe:filePath "docs/ImplementationPlan.md" ;
+        oe:fileSizeBytes 0 .
+}
+
+<https://ontologist.ai/ns/oe/module/core-ontology-core-ttl/interior> {
+    <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl> oe:fileExt ".ttl" ;
+        oe:fileName "core.ttl" ;
+        oe:filePath "core/ontology/core.ttl" ;
+        oe:fileSizeBytes 10284 .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-requirements-py-load-dependencies> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> ;
+        oe:functionName "load_dependencies" ;
+        oe:lineNumber 17 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-requirements-py-main> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> ;
+        oe:functionName "main" ;
+        oe:lineNumber 40 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-requirements-py-validate-dependencies> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> ;
+        oe:functionName "validate_dependencies" ;
+        oe:lineNumber 12 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-requirements-py-write-requirements> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> ;
+        oe:functionName "write_requirements" ;
+        oe:lineNumber 33 .
+
+    <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> oe:dependsOn build:os,
+            build:rdflib,
+            build:subprocess ;
+        oe:fileExt ".py" ;
+        oe:fileName "generate_requirements.py" ;
+        oe:filePath "pipeline/generate_requirements.py" ;
+        oe:fileSizeBytes 1380 .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/context> {
+    <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-code-parser-py/context> {
+    <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/introspection-code-parser-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/introspection-code-parser-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/introspection-code-parser-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/introspection-code-parser-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig/interior> {
+    <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig> oe:fileExt ".trig" ;
+        oe:fileName "introspection.trig" ;
+        oe:filePath "logs/graphs/introspection.trig" ;
+        oe:fileSizeBytes 85795 .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-verify-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-verify-py-main> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-verify-py> ;
+        oe:functionName "main" ;
+        oe:lineNumber 15 .
+
+    <https://ontologist.ai/ns/oe/module/pipeline-verify-py> oe:dependsOn build:pathlib,
+            build:sys,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store>,
+            <https://ontologist.ai/ns/oe/module/verification-rule-engine>,
+            <https://ontologist.ai/ns/oe/module/verification-verify-cli> ;
+        oe:fileExt ".py" ;
+        oe:fileName "verify.py" ;
+        oe:filePath "pipeline/verify.py" ;
+        oe:fileSizeBytes 1430 .
+}
+
+<https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl/interior> {
+    <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl> oe:fileExt ".ttl" ;
+        oe:fileName "holon_shapes.ttl" ;
+        oe:filePath "core/shacl/holon_shapes.ttl" ;
+        oe:fileSizeBytes 1618 .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-rule-engine-py/interior> {
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-ruleengine> a oe:CodeClass ;
+        oe:className "RuleEngine" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:lineNumber 74 .
+
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-rulereport> a oe:CodeClass ;
+        oe:className "RuleReport" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:lineNumber 45 .
+
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-ruleviolation> a oe:CodeClass ;
+        oe:className "RuleViolation" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:lineNumber 36 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-all-issues> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "all_issues" ;
+        oe:lineNumber 52 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-dfs> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "dfs" ;
+        oe:lineNumber 154 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-flatten> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_flatten" ;
+        oe:lineNumber 124 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-init> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "__init__" ;
+        oe:lineNumber 77 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-parse-shacl-results> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_parse_shacl_results" ;
+        oe:lineNumber 224 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-print-all> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "print_all" ;
+        oe:lineNumber 64 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-rule-code-modules-have-functions> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_rule_code_modules_have_functions" ;
+        oe:lineNumber 180 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-rule-holon-interior-not-empty> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_rule_holon_interior_not_empty" ;
+        oe:lineNumber 203 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-rule-no-dependency-cycles> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_rule_no_dependency_cycles" ;
+        oe:lineNumber 141 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-run> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "run" ;
+        oe:lineNumber 84 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-run-python-rules> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_run_python_rules" ;
+        oe:lineNumber 136 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-run-shacl> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_run_shacl" ;
+        oe:lineNumber 97 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-short> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "_short" ;
+        oe:lineNumber 247 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-rule-engine-py-summary> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> ;
+        oe:functionName "summary" ;
+        oe:lineNumber 55 .
+
+    <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> oe:dependsOn build:__future__,
+            build:dataclasses,
+            build:pyshacl,
+            build:rdflib,
+            build:re,
+            build:typing,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store> ;
+        oe:fileExt ".py" ;
+        oe:fileName "rule_engine.py" ;
+        oe:filePath "verification/rule_engine.py" ;
+        oe:fileSizeBytes 9672 .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-introspect-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-introspect-py-main> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-introspect-py> ;
+        oe:functionName "main" ;
+        oe:lineNumber 19 .
+
+    <https://ontologist.ai/ns/oe/module/pipeline-introspect-py> oe:dependsOn build:pathlib,
+            build:sys,
+            <https://ontologist.ai/ns/oe/module/introspection-code-parser>,
+            <https://ontologist.ai/ns/oe/module/introspection-doc-parser>,
+            <https://ontologist.ai/ns/oe/module/introspection-project-scanner>,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store> ;
+        oe:fileExt ".py" ;
+        oe:fileName "introspect.py" ;
+        oe:filePath "pipeline/introspect.py" ;
+        oe:fileSizeBytes 1720 .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-databook-py-add-yaml-header> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> ;
+        oe:functionName "add_yaml_header" ;
+        oe:lineNumber 42 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-databook-py-convert-to-rdf> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> ;
+        oe:functionName "convert_to_rdf" ;
+        oe:lineNumber 57 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-databook-py-ensure-directories> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> ;
+        oe:functionName "ensure_directories" ;
+        oe:lineNumber 38 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-databook-py-main> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> ;
+        oe:functionName "main" ;
+        oe:lineNumber 67 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-pipeline-generate-databook-py-validate-rdf> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> ;
+        oe:functionName "validate_rdf" ;
+        oe:lineNumber 62 .
+
+    <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> oe:dependsOn build:datetime,
+            build:os,
+            build:subprocess ;
+        oe:fileExt ".py" ;
+        oe:fileName "generate_databook.py" ;
+        oe:filePath "pipeline/generate_databook.py" ;
+        oe:fileSizeBytes 2009 .
+}
+
+<https://ontologist.ai/ns/oe/module/requirements-txt/context> {
+    <https://ontologist.ai/ns/oe/module/requirements-txt> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/requirements-txt/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/requirements-txt/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/requirements-txt/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/requirements-txt/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py/context> {
+    <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-verify-py/context> {
+    <https://ontologist.ai/ns/oe/module/pipeline-verify-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/pipeline-verify-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/pipeline-verify-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/pipeline-verify-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/pipeline-verify-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/requirements-txt/interior> {
+    <https://ontologist.ai/ns/oe/module/requirements-txt> db:content """pyshacl>=0.25
+pyyaml>=6.0
+rdflib>=7.0.0
+""" ;
+        db:title "requirements" ;
+        oe:fileExt ".txt" ;
+        oe:fileName "requirements.txt" ;
+        oe:filePath "requirements.txt" ;
+        oe:fileSizeBytes 40 .
+}
+
+<https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-api-tools-md-to-rdf-py-md-to-rdf> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py> ;
+        oe:functionName "md_to_rdf" ;
+        oe:lineNumber 8 .
+
+    <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py> oe:dependsOn build:rdflib,
+            build:sys,
+            build:yaml ;
+        oe:fileExt ".py" ;
+        oe:fileName "md_to_rdf.py" ;
+        oe:filePath "api/tools/md_to_rdf.py" ;
+        oe:fileSizeBytes 2714 .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-init-py/context> {
+    <https://ontologist.ai/ns/oe/module/verification-init-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/verification-init-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/verification-init-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/verification-init-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/verification-init-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-init-py/interior> {
+    <https://ontologist.ai/ns/oe/module/verification-init-py> oe:fileExt ".py" ;
+        oe:fileName "__init__.py" ;
+        oe:filePath "verification/__init__.py" ;
+        oe:fileSizeBytes 0 .
+}
+
+<https://ontologist.ai/ns/oe/module/agents-md/context> {
+    <https://ontologist.ai/ns/oe/module/agents-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/agents-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/agents-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/agents-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/agents-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/context> {
+    <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-verify-cli-py/interior> {
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-verifycli> a oe:CodeClass ;
+        oe:className "VerifyCLI" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:lineNumber 36 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-init> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:functionName "__init__" ;
+        oe:lineNumber 39 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-present-issue> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:functionName "_present_issue" ;
+        oe:lineNumber 70 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-print-summary> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:functionName "_print_summary" ;
+        oe:lineNumber 124 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-run> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:functionName "run" ;
+        oe:lineNumber 46 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-shorten> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:functionName "_shorten" ;
+        oe:lineNumber 136 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-verify-cli-py-write-event> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> ;
+        oe:functionName "_write_event" ;
+        oe:lineNumber 98 .
+
+    <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> oe:dependsOn build:__future__,
+            build:datetime,
+            build:rdflib,
+            build:typing,
+            build:uuid,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store>,
+            <https://ontologist.ai/ns/oe/module/storage-id-manager>,
+            <https://ontologist.ai/ns/oe/module/verification-rule-engine> ;
+        oe:fileExt ".py" ;
+        oe:fileName "verify_cli.py" ;
+        oe:filePath "verification/verify_cli.py" ;
+        oe:fileSizeBytes 5603 .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-init-py/context> {
+    <https://ontologist.ai/ns/oe/module/introspection-init-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/introspection-init-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/introspection-init-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/introspection-init-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/introspection-init-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-project-scanner-py/context> {
+    <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/interior> {
+    <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md> db:authorIRI <https://ontologist.ai/agents/michael> ;
+        db:authorName "Michael" ;
+        db:content """databook:
+  id: event_schema
+  title: "Event Log Schema"
+  version: 1.1.0
+  type: reference
+  domain: ontology-engine
+  status: active
+  created: 2026-04-18
+  updated: 2026-04-18
+  author:
+    - name: Michael
+      iri: https://ontologist.ai/agents/michael
+  process:
+    transformer: human
+    inputs: []
+  license: CC-BY-4.0
+  tags:
+    - events
+    - logging
+    - rdf
+    - prov-o
+    - event-first
+---
+# Event Log Schema
+
+Aligned with ground truth: event-first ontology + RDF 1.2 reification + PROV-O.
+See: https://ontologist.substack.com/p/when-predicates-lie-shacl-reification
+
+## Design Principle: Event-First
+
+Pipeline actions are **first-class events**, not bare predicates. A predicate like `oe:hasExecuted` is a materialised view — the event node is the authoritative record.
+
+Four-question test before adding a predicate:
+- Provenance? Temporality? Conditionality? Agency? → If yes to any → model as `oe:Event`.
+
+## Namespaces
+
+```turtle
+@prefix oe:   <https://ontologist.ai/ns/oe/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+```
+
+## Base Event Pattern (RDF 1.2 with reification)
+
+```turtle
+# Event node (interior graph of the PipelineHolon)
+GRAPH <urn:oe:pipeline:interior> {
+    :event_<uuid> a oe:PlanExecuted ;
+        oe:hasAgent   "PlanningAgent" ;
+        oe:hasTask    :task_<uri> ;
+        oe:hasStatus  "success" ;
+        prov:startedAtTime "2026-04-18T12:00:00Z"^^xsd:dateTime ;
+        prov:endedAtTime   "2026-04-18T12:00:05Z"^^xsd:dateTime ;
+        prov:wasAssociatedWith :agent_PlanningAgent .
+
+    # RDF 1.2 annotation — confidence on the result link
+    :event_<uuid> oe:hasResult :result_<uri>
+        ~ :ann_<uuid> {|
+            oe:confidence "0.97"^^xsd:decimal ;
+            prov:wasAttributedTo :agent_PlanningAgent
+        |} .
+}
+```
+
+## PROV-O Agent Types
+
+```turtle
+oe:HumanAgent    a prov:Agent, prov:Person .
+oe:SystemAgent   a prov:Agent, prov:SoftwareAgent .
+oe:LLMAgent      a prov:Agent, prov:Soft""" ;
+        db:created "2026-04-18" ;
+        db:id "event_schema" ;
+        db:license "CC-BY-4.0" ;
+        db:title "Event Log Schema" ;
+        db:transformer "human" ;
+        db:type "reference" ;
+        db:version "1.1.0" ;
+        oe:fileExt ".md" ;
+        oe:fileName "event-schema.md" ;
+        oe:filePath "docs/logs/event-schema.md" ;
+        oe:fileSizeBytes 3881 .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-readme-md/context> {
+    <https://ontologist.ai/ns/oe/module/docs-readme-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/docs-readme-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/docs-readme-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/docs-readme-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/docs-readme-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-introspect-py/context> {
+    <https://ontologist.ai/ns/oe/module/pipeline-introspect-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/pipeline-introspect-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/pipeline-introspect-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/pipeline-introspect-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/pipeline-introspect-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt/context> {
+    <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/project/ontology-engine/interior> {
+    <https://ontologist.ai/ns/oe/project/ontology-engine> oe:rootPath "/home/mikz/ontology-engine" .
+}
+
+<https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl/context> {
+    <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl/interior> {
+    <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl> oe:fileExt ".ttl" ;
+        oe:fileName "dependencies.ttl" ;
+        oe:filePath "core/ontology/dependencies.ttl" ;
+        oe:fileSizeBytes 566 .
+}
+
+<https://ontologist.ai/ns/oe/module/readme-md/interior> {
+    <https://ontologist.ai/ns/oe/module/readme-md> db:content """# ontology-engine
+
+Онтологический движок для автоматического построения, обогащения, верификации и планирования проектов.
+
+## Структура проекта
+
+- core/ — онтология, SHACL, правила
+- introspection/ — анализ существующего проекта
+- enrichment/ — обогащение через Tawily
+- interaction/ — интервьюирование пользователя
+- verification/ — SHACL + rule engine
+- context/ — формирование контекстов
+- planning/ — классификация, декомпозиция, планирование
+- pipeline/ — оркестрация pipeline (без LLM)
+- visual""" ;
+        db:title "README" ;
+        oe:fileExt ".md" ;
+        oe:fileName "README.md" ;
+        oe:filePath "README.md" ;
+        oe:fileSizeBytes 900 .
+}
+
+<https://ontologist.ai/ns/oe/module/storage-id-manager-py/context> {
+    <https://ontologist.ai/ns/oe/module/storage-id-manager-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/storage-id-manager-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/storage-id-manager-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/storage-id-manager-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/storage-id-manager-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-init-py/interior> {
+    <https://ontologist.ai/ns/oe/module/introspection-init-py> oe:fileExt ".py" ;
+        oe:fileName "__init__.py" ;
+        oe:filePath "introspection/__init__.py" ;
+        oe:fileSizeBytes 0 .
+}
+
+<https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py/context> {
+    <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/interior> {
+    <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md> db:authorIRI <https://ontologist.ai/agents/michael> ;
+        db:authorName "Michael" ;
+        db:content """databook:
+  id: ontology_namespaces
+  title: "Ontology Namespace Reference"
+  version: 1.1.0
+  type: reference
+  domain: ontology-engine
+  status: active
+  created: 2026-04-18
+  updated: 2026-04-18
+  author:
+    - name: Michael
+      iri: https://ontologist.ai/agents/michael
+  process:
+    transformer: human
+    inputs: []
+  license: CC-BY-4.0
+  tags:
+    - ontology
+    - namespaces
+    - rdf
+---
+# Ontology Namespace Reference
+
+Ground truth: https://ontologist.ai/ns/ (The Ontologist — see archive)
+
+## Active Namespaces
+
+| Prefix | URI | Source | Description |
+|---|---|---|---|
+| `cga:` | `https://ontologist.ai/ns/cga/` | ground truth | Contextual Graph Architecture — Holon four-graph model |
+| `build:` | `https://ontologist.ai/ns/build#` | ground truth | Build pipeline vocabulary — Stage, Target, Source, PythonPackage |
+| `db:` | `https://ontologist.ai/ns/databook#` | ground truth | Databook nodes — canonical semantic document format |
+| `oe:` | `https://ontologist.ai/ns/oe/` | project | Ontology Engine — project-specific classes and properties |
+| `prov:` | `http://www.w3.org/ns/prov#` | W3C | PROV-O — provenance vocabulary |
+| `skos:` | `http://www.w3.org/2004/02/skos/core#` | W3C | SKOS — concept schemes and taxonomies |
+| `sh:` | `http://www.w3.org/ns/shacl#` | W3C | SHACL — constraint language |
+| `owl:` | `http://www.w3.org/2002/07/owl#` | W3C | OWL 2 — ontology language |
+| `xsd:` | `http://www.w3.org/2001/XMLSchema#` | W3C | XSD datatypes |
+
+## Core Classes (current)
+
+### Holon Architecture (`cga:`)
+- `cga:Holon` — base class; four graphs: interior, boundary, projection, context
+- `cga:hasInteriorGraph`, `cga:hasBoundaryGraph`, `cga:hasProjectionGraph`, `cga:hasContextGraph`
+- `cga:partOf`, `cga:memberOf`, `cga:holonDepth`
+
+### Ontology Engine (`oe:`)
+| Class | Stage | Description |
+|---|---|---|
+| `oe:ProjectHolon` | 1 | Top-level project container |
+| `oe:ModuleHolon`, `oe:CodeModule`, `oe:DataModule`, `oe:ServiceModule`, `oe:ConfigModule` | 2 | Code struc""" ;
+        db:created "2026-04-18" ;
+        db:id "ontology_namespaces" ;
+        db:license "CC-BY-4.0" ;
+        db:title "Ontology Namespace Reference" ;
+        db:transformer "human" ;
+        db:type "reference" ;
+        db:version "1.1.0" ;
+        oe:fileExt ".md" ;
+        oe:fileName "namespaces.md" ;
+        oe:filePath "docs/ontology/namespaces.md" ;
+        oe:fileSizeBytes 3540 .
+}
+
+<https://ontologist.ai/ns/oe/pipeline/interior> {
+    <https://ontologist.ai/ns/oe/event/databook-updated-156a7d76> a oe:DatabookUpdated ;
+        prov:startedAtTime "2026-04-18T13:47:58.570766+00:00"^^xsd:dateTime ;
+        oe:databookUri <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md> ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" .
+
+    <https://ontologist.ai/ns/oe/event/databook-updated-59905096> a oe:DatabookUpdated ;
+        prov:startedAtTime "2026-04-18T13:47:58.567616+00:00"^^xsd:dateTime ;
+        oe:databookUri <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md> ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" .
+
+    <https://ontologist.ai/ns/oe/event/databook-updated-d4a36dcb> a oe:DatabookUpdated ;
+        prov:startedAtTime "2026-04-18T13:47:58.569714+00:00"^^xsd:dateTime ;
+        oe:databookUri <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md> ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" .
+
+    <https://ontologist.ai/ns/oe/event/databook-updated-eb5d5b89> a oe:DatabookUpdated ;
+        prov:startedAtTime "2026-04-18T13:47:58.568747+00:00"^^xsd:dateTime ;
+        oe:databookUri <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md> ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-098b1a88> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.520250+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-1c1b90df> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.525352+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-1ec11ce5> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.520607+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-285e1da7> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.525960+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/storage-graph-store-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-2e30b98c> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.524500+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-2f6ee318> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.526988+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-3cfe4a66> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.520843+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/core-rules-rules-ttl> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-40fd6c78> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.521047+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-43a1487a> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.524236+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-4455d97a> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.522070+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/docs-readme-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-54f7e635> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.522489+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-5c9f3dec> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.521273+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-6046de1e> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.524694+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-67ff38ef> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.519748+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/readme-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-6d225666> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.522922+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-7abf1040> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.524036+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-83a3d636> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.526360+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/verification-init-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-8d11d5c0> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.525545+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/requirements-txt> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-8dc4aaf2> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.523766+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-94646fbc> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.522267+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-9905c4d3> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.521824+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/docs-implementationplan-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-a68ed620> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.522693+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-b85b60ab> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.525120+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/pipeline-verify-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-c1a1ebf1> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.526558+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/verification-rule-engine-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-c726d060> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.526792+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-ca1a51c9> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.519996+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-d120ceeb> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.525734+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/storage-init-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-d3b0372d> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.523573+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-d56fa8c2> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.526149+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/storage-id-manager-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-e257900b> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.524885+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/pipeline-introspect-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-e6427c76> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.521550+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-ee08ecba> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.519485+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:DataModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/agents-md> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-f39bf89b> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.523353+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/introspection-code-parser-py> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-f83efc4a> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.508115+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:ConfigModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/claude-settings-local-json> .
+
+    <https://ontologist.ai/ns/oe/event/module-detected-fefd331a> a oe:ModuleDetected ;
+        prov:startedAtTime "2026-04-18T13:47:58.523138+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleType oe:CodeModule ;
+        oe:moduleUri <https://ontologist.ai/ns/oe/module/introspection-init-py> .
+
+    <https://ontologist.ai/ns/oe/event/project-scanned-029dd4cb> a oe:ProjectScanned ;
+        prov:startedAtTime "2026-04-18T13:47:58.527324+00:00"^^xsd:dateTime ;
+        oe:hasAgent "IntrospectionAgent" ;
+        oe:hasStatus "success" ;
+        oe:moduleCount 35 ;
+        oe:projectUri <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md/projection> {
+    <https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md> a db:Databook .
+}
+
+<https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl/context> {
+    <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt/interior> {
+    <https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt> db:content """rdflib>=7.0.0
+pyshacl>=0.25
+pyyaml>=6.0
+""" ;
+        db:title "bootstrap‑requirements" ;
+        oe:fileExt ".txt" ;
+        oe:fileName "bootstrap‑requirements.txt" ;
+        oe:filePath "requirements/bootstrap‑requirements.txt" ;
+        oe:fileSizeBytes 40 .
+}
+
+<https://ontologist.ai/ns/oe/module/storage-graph-store-py/context> {
+    <https://ontologist.ai/ns/oe/module/storage-graph-store-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/storage-graph-store-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/storage-graph-store-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/storage-graph-store-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/storage-graph-store-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl/interior> {
+    <https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl> oe:fileExt ".ttl" ;
+        oe:fileName "dependencies_shapes.ttl" ;
+        oe:filePath "core/shacl/dependencies_shapes.ttl" ;
+        oe:fileSizeBytes 765 .
+}
+
+<https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl/interior> {
+    <https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl> oe:fileExt ".ttl" ;
+        oe:fileName "databook_shapes.ttl" ;
+        oe:filePath "core/shacl/databook_shapes.ttl" ;
+        oe:fileSizeBytes 1433 .
+}
+
+<https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig/interior> {
+    <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig> oe:fileExt ".trig" ;
+        oe:fileName "verified.trig" ;
+        oe:filePath "logs/graphs/verified.trig" ;
+        oe:fileSizeBytes 85795 .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md/projection> {
+    <https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md> a db:Databook .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-readme-md/interior> {
+    <https://ontologist.ai/ns/oe/module/docs-readme-md> db:content """# docs/
+
+## Structure
+
+```
+docs/
+├── databooks/      SHACL-validated Markdown design documents (frontmatter required)
+├── adr/            Architecture Decision Records — immutable, numbered, append-only
+├── agents/         Per-agent specifications (mirrors AGENTS.md at module level)
+├── ontology/       Ontology class/property reference, namespace docs
+├── guides/         How-to guides for using the engine
+├── api/            API skill/tool reference
+└── logs/           Log format specs (actual l""" ;
+        db:title "README" ;
+        oe:fileExt ".md" ;
+        oe:fileName "README.md" ;
+        oe:filePath "docs/README.md" ;
+        oe:fileSizeBytes 1066 .
+}
+
+<https://ontologist.ai/ns/oe/module/claude-settings-local-json/context> {
+    <https://ontologist.ai/ns/oe/module/claude-settings-local-json> a oe:ConfigModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/claude-settings-local-json/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/claude-settings-local-json/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/claude-settings-local-json/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/claude-settings-local-json/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig/context> {
+    <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/storage-init-py/context> {
+    <https://ontologist.ai/ns/oe/module/storage-init-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/storage-init-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/storage-init-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/storage-init-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/storage-init-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/projection> {
+    <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md> a db:Databook .
+}
+
+<https://ontologist.ai/ns/oe/module/agents-md/interior> {
+    <https://ontologist.ai/ns/oe/module/agents-md> db:content """# AGENTS.md — Ontology Engine Agent Specifications
+
+## Core Philosophy
+
+**LLMs are atomic task executors only — never orchestrators.**
+
+The pipeline is driven exclusively by ontology logic and SHACL rules. Every agent listed here is either:
+- A **System Agent** — deterministic Python module, no LLM, pure reasoning/rules
+- An **LLM Executor Agent** — a constrained LLM call with a fixed schema for input/output, invoked only when a Task ontology node of the right type is active and its context subg""" ;
+        db:title "AGENTS" ;
+        oe:fileExt ".md" ;
+        oe:fileName "AGENTS.md" ;
+        oe:filePath "AGENTS.md" ;
+        oe:fileSizeBytes 11390 .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-project-scanner-py/interior> {
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-projectscanner> a oe:CodeClass ;
+        oe:className "ProjectScanner" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:lineNumber 31 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-emit-module> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:functionName "_emit_module" ;
+        oe:lineNumber 66 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-emit-module-event> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:functionName "_emit_module_event" ;
+        oe:lineNumber 85 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-emit-scan-event> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:functionName "_emit_scan_event" ;
+        oe:lineNumber 101 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-init> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:functionName "__init__" ;
+        oe:lineNumber 39 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-scan> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:functionName "scan" ;
+        oe:lineNumber 43 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-project-scanner-py-walk> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> ;
+        oe:functionName "_walk" ;
+        oe:lineNumber 58 .
+
+    <https://ontologist.ai/ns/oe/module/introspection-project-scanner-py> oe:dependsOn build:datetime,
+            build:pathlib,
+            build:rdflib,
+            build:uuid,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store>,
+            <https://ontologist.ai/ns/oe/module/storage-id-manager> ;
+        oe:fileExt ".py" ;
+        oe:fileName "project_scanner.py" ;
+        oe:filePath "introspection/project_scanner.py" ;
+        oe:fileSizeBytes 5210 .
+}
+
+<https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig/context> {
+    <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/storage-init-py/interior> {
+    <https://ontologist.ai/ns/oe/module/storage-init-py> oe:fileExt ".py" ;
+        oe:fileName "__init__.py" ;
+        oe:filePath "storage/__init__.py" ;
+        oe:fileSizeBytes 0 .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md/projection> {
+    <https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md> a db:Databook .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-shacl-validator-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-verification-shacl-validator-py-main> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py> ;
+        oe:functionName "main" ;
+        oe:lineNumber 5 .
+
+    <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py> oe:dependsOn build:pyshacl,
+            build:rdflib,
+            build:sys ;
+        oe:fileExt ".py" ;
+        oe:fileName "shacl_validator.py" ;
+        oe:filePath "verification/shacl_validator.py" ;
+        oe:fileSizeBytes 815 .
+}
+
+<https://ontologist.ai/ns/oe/module/storage-id-manager-py/interior> {
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-id-manager-py-graph-uri> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-id-manager-py> ;
+        oe:functionName "graph_uri" ;
+        oe:lineNumber 32 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-id-manager-py-slug> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-id-manager-py> ;
+        oe:functionName "_slug" ;
+        oe:lineNumber 18 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-id-manager-py-uri> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-id-manager-py> ;
+        oe:functionName "uri" ;
+        oe:lineNumber 23 .
+
+    <https://ontologist.ai/ns/oe/module/storage-id-manager-py> oe:dependsOn build:rdflib,
+            build:re ;
+        oe:fileExt ".py" ;
+        oe:fileName "id_manager.py" ;
+        oe:filePath "storage/id_manager.py" ;
+        oe:fileSizeBytes 1063 .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-shacl-validator-py/context> {
+    <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/verification-shacl-validator-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/verification-verify-cli-py/context> {
+    <https://ontologist.ai/ns/oe/module/verification-verify-cli-py> a oe:CodeModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/verification-verify-cli-py/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/verification-verify-cli-py/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/verification-verify-cli-py/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/verification-verify-cli-py/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/core-ontology-core-ttl/context> {
+    <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/core-ontology-core-ttl/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/context> {
+    <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md> a oe:DataModule ;
+        cga:hasBoundaryGraph <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/boundary> ;
+        cga:hasContextGraph <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/context> ;
+        cga:hasInteriorGraph <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/interior> ;
+        cga:hasProjectionGraph <https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md/projection> ;
+        cga:partOf <https://ontologist.ai/ns/oe/project/ontology-engine> .
+}
+
+<https://ontologist.ai/ns/oe/module/introspection-doc-parser-py/interior> {
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-docparser> a oe:CodeClass ;
+        oe:className "DocParser" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:lineNumber 19 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-coerce-list> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "_coerce_list" ;
+        oe:lineNumber 130 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-emit-databook> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "_emit_databook" ;
+        oe:lineNumber 75 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-emit-databook-event> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "_emit_databook_event" ;
+        oe:lineNumber 102 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-extract-frontmatter> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "_extract_frontmatter" ;
+        oe:lineNumber 118 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-init> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "__init__" ;
+        oe:lineNumber 30 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-parse-all> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "parse_all" ;
+        oe:lineNumber 34 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-introspection-doc-parser-py-parse-file> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> ;
+        oe:functionName "_parse_file",
+            "parse_file" ;
+        oe:lineNumber 48,
+            51 .
+
+    <https://ontologist.ai/ns/oe/module/introspection-doc-parser-py> oe:dependsOn build:datetime,
+            build:pathlib,
+            build:rdflib,
+            build:typing,
+            build:uuid,
+            build:yaml,
+            <https://ontologist.ai/ns/oe/module/storage-graph-store>,
+            <https://ontologist.ai/ns/oe/module/storage-id-manager> ;
+        oe:fileExt ".py" ;
+        oe:fileName "doc_parser.py" ;
+        oe:filePath "introspection/doc_parser.py" ;
+        oe:fileSizeBytes 5661 .
+}
+
+<https://ontologist.ai/ns/oe/module/storage-graph-store-py/interior> {
+    <https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-storage-graph-store-py-graphstore> a oe:CodeClass ;
+        oe:className "GraphStore" ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:lineNumber 15 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "add" ;
+        oe:lineNumber 40 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add-many> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "add_many" ;
+        oe:lineNumber 44 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-bind-namespaces> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "_bind_namespaces" ;
+        oe:lineNumber 29 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-declare-holon> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "declare_holon" ;
+        oe:lineNumber 49 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-init> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "__init__" ;
+        oe:lineNumber 25 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-interior> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "interior" ;
+        oe:lineNumber 66 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-len> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "__len__" ;
+        oe:lineNumber 128 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "load" ;
+        oe:lineNumber 91 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load-turtle> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "load_turtle" ;
+        oe:lineNumber 94 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-projection> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "projection" ;
+        oe:lineNumber 69 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-query> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "query" ;
+        oe:lineNumber 72 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-repr> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "__repr__" ;
+        oe:lineNumber 131 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-save> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "save" ;
+        oe:lineNumber 87 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-subjects> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "subjects" ;
+        oe:lineNumber 79 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-validate> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "validate" ;
+        oe:lineNumber 105 .
+
+    <https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-value> a oe:CodeFunction ;
+        oe:definedIn <https://ontologist.ai/ns/oe/module/storage-graph-store-py> ;
+        oe:functionName "value" ;
+        oe:lineNumber 75 .
+
+    <https://ontologist.ai/ns/oe/module/storage-graph-store-py> oe:dependsOn build:pathlib,
+            build:pyshacl,
+            build:rdflib,
+            build:typing ;
+        oe:fileExt ".py" ;
+        oe:fileName "graph_store.py" ;
+        oe:filePath "storage/graph_store.py" ;
+        oe:fileSizeBytes 5863 .
+}
+

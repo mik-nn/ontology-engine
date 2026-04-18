@@ -1,0 +1,56 @@
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix db:  <https://ontologist.ai/ns/databook#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+db:DatabookShape
+    a sh:NodeShape ;
+    sh:targetClass db:Databook ;
+
+    sh:property [
+        sh:path db:id ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A Databook must have an id." ;
+    ] ;
+
+    sh:property [
+        sh:path db:title ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A Databook must have a title." ;
+    ] ;
+
+    sh:property [
+        sh:path db:version ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A Databook must have a version." ;
+    ] ;
+
+    sh:property [
+        sh:path db:type ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A Databook must have a type." ;
+    ] ;
+
+    sh:property [
+        sh:path db:created ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A Databook must have a creation date." ;
+    ] ;
+
+    sh:property [
+        sh:path db:content ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A Databook must have content." ;
+    ] ;
+
+    sh:property [
+        sh:path db:transformer ;
+        sh:datatype xsd:string ;
+        sh:in ( "human" "llm" "sparql" "xslt" ) ;
+        sh:message "transformer must be one of: human, llm, sparql, xslt." ;
+    ] .

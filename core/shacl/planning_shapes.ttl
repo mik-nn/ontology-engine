@@ -1,0 +1,64 @@
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix oe:  <https://ontologist.ai/ns/oe/> .
+@prefix cga: <https://ontologist.ai/ns/cga/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+oe:PlanShape
+    a sh:NodeShape ;
+    sh:targetClass oe:Plan ;
+
+    sh:property [
+        sh:path oe:hasStatus ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "pending" "ready" "active" "completed" "failed" ) ;
+        sh:message "Plan must have a valid status." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:planRequest ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "Plan must record the original user request." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:planType ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "ExplainTask" "AnalysisTask" "DesignTask" "ImplementTask" "RefactorTask" ) ;
+        sh:message "Plan type must be a valid TaskType." ;
+    ] .
+
+oe:SubtaskShape
+    a sh:NodeShape ;
+    sh:targetClass oe:Subtask ;
+
+    sh:property [
+        sh:path oe:hasStatus ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "pending" "active" "completed" "failed" "skipped" ) ;
+        sh:message "Subtask must have a valid status." ;
+    ] ;
+
+    sh:property [
+        sh:path cga:partOf ;
+        sh:minCount 1 ;
+        sh:message "Subtask must reference its parent Plan via cga:partOf." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:hasExecutor ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "llm" "reasoning" "git_client" "llm_stub" ) ;
+        sh:message "Subtask must declare a valid executor." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:taskName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "Subtask must have a name." ;
+    ] .

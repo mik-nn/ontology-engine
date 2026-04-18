@@ -1,0 +1,59 @@
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix cga: <https://ontologist.ai/ns/cga/> .
+@prefix oe:  <https://ontologist.ai/ns/oe/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Every Holon must declare its interior and boundary graphs.
+# Projection and context graphs are optional at this stage.
+cga:HolonShape
+    a sh:NodeShape ;
+    sh:targetClass cga:Holon ;
+
+    sh:property [
+        sh:path cga:hasInteriorGraph ;
+        sh:minCount 1 ;
+        sh:message "A Holon must declare an interior graph." ;
+    ] ;
+
+    sh:property [
+        sh:path cga:hasBoundaryGraph ;
+        sh:minCount 1 ;
+        sh:message "A Holon must declare a boundary graph." ;
+    ] .
+
+oe:TaskHolonShape
+    a sh:NodeShape ;
+    sh:targetClass oe:TaskHolon ;
+
+    sh:property [
+        sh:path oe:hasStatus ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "pending" "active" "completed" "failed" "skipped" ) ;
+        sh:message "A Task must have a valid status." ;
+    ] ;
+
+    sh:property [
+        sh:path cga:partOf ;
+        sh:minCount 1 ;
+        sh:message "A Task must belong to a Project or Plan." ;
+    ] .
+
+oe:EventShape
+    a sh:NodeShape ;
+    sh:targetClass oe:Event ;
+
+    sh:property [
+        sh:path oe:hasAgent ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "An Event must identify the agent that emitted it." ;
+    ] ;
+
+    sh:property [
+        sh:path oe:hasStatus ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "success" "failure" "skipped" ) ;
+        sh:message "An Event must have a valid status." ;
+    ] .

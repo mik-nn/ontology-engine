@@ -1,0 +1,239 @@
+{
+  "packet_id": "ctx-587e8650",
+  "anchor_uri": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+  "anchor_type": "CodeModule",
+  "depth_used": 3,
+  "token_estimate": 1141,
+  "triple_count": 21,
+  "databook_fragments": [],
+  "entity_summaries": {
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-validate": "CodeFunction: validate",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-query": "CodeFunction: query",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-value": "CodeFunction: value",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-init": "CodeFunction: __init__",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-subjects": "CodeFunction: subjects",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-save": "CodeFunction: save",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-bind-namespaces": "CodeFunction: _bind_namespaces",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load": "CodeFunction: load",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-repr": "CodeFunction: __repr__",
+    "https://ontologist.ai/ns/oe/module/storage-graph-store-py": "CodeModule: graph_store.py",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add-many": "CodeFunction: add_many",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load-turtle": "CodeFunction: load_turtle",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-declare-holon": "CodeFunction: declare_holon",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-len": "CodeFunction: __len__",
+    "https://ontologist.ai/ns/oe/project/ontology-engine": "ProjectHolon: ontology-engine",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-interior": "CodeFunction: interior",
+    "https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-storage-graph-store-py-graphstore": "CodeClass: GraphStore",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add": "CodeFunction: add",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-projection": "CodeFunction: projection"
+  },
+  "triples": [
+    {
+      "s": "https://ontologist.ai/ns/oe/event/module-detected-285e1da7",
+      "p": "https://ontologist.ai/ns/oe/moduleUri",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "p": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+      "o": "https://ontologist.ai/ns/oe/CodeModule",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "p": "https://ontologist.ai/ns/cga/partOf",
+      "o": "https://ontologist.ai/ns/oe/project/ontology-engine",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "p": "https://ontologist.ai/ns/oe/dependsOn",
+      "o": "https://ontologist.ai/ns/build#pathlib",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-storage-graph-store-py-graphstore",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add-many",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-bind-namespaces",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-declare-holon",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-init",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-interior",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-len",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load-turtle",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-projection",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-query",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-repr",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-save",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-subjects",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-validate",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    },
+    {
+      "s": "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-value",
+      "p": "https://ontologist.ai/ns/oe/definedIn",
+      "o": "https://ontologist.ai/ns/oe/module/storage-graph-store-py",
+      "depth": 0
+    }
+  ],
+  "included": {
+    "https://ontologist.ai/ns/oe/module/storage-graph-store-py": "anchor",
+    "https://ontologist.ai/ns/oe/project/ontology-engine": "BFS depth 1",
+    "https://ontologist.ai/ns/build#pathlib": "BFS depth 1",
+    "https://ontologist.ai/ns/build#pyshacl": "BFS depth 1",
+    "https://ontologist.ai/ns/build#rdflib": "BFS depth 1",
+    "https://ontologist.ai/ns/build#typing": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-storage-graph-store-py-graphstore": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add-many": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-bind-namespaces": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-declare-holon": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-init": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-interior": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-len": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load-turtle": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-projection": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-query": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-repr": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-save": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-subjects": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-validate": "BFS depth 1",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-value": "BFS depth 1"
+  },
+  "excluded": {
+    "https://ontologist.ai/ns/oe/module/storage-graph-store-py": "metadata predicate removed for budget",
+    "https://ontologist.ai/ns/oe/project/ontology-engine": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/https-ontologist-ai-ns-oe-module-storage-graph-store-py-graphstore": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-add-many": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-bind-namespaces": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-declare-holon": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-init": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-interior": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-len": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-load-turtle": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-projection": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-query": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-repr": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-save": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-subjects": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-validate": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/task/https-ontologist-ai-ns-oe-module-storage-graph-store-py-value": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/introspection-project-scanner-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/introspection-code-parser-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/verification-rule-engine-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/verification-shacl-validator-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/introspection-doc-parser-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/verification-verify-cli-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/pipeline-generate-requirements-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/pipeline-generate-databook-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/event/project-scanned-029dd4cb": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/readme-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/core-shacl-dependencies-shapes-ttl": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/core-rules-rules-ttl": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/api-tools-md-to-rdf-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/docs-implementationplan-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/requirements-txt": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/core-ontology-dependencies-ttl": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/docs-readme-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/introspection-init-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/core-ontology-core-ttl": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/storage-init-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/docs-databooks-implementationplan-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/storage-id-manager-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/agents-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/verification-init-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/docs-ontology-namespaces-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/claude-settings-local-json": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/docs-logs-event-schema-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/pipeline-introspect-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/pipeline-verify-py": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/logs-graphs-introspection-trig": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/core-shacl-holon-shapes-ttl": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/requirements-bootstrap-requirements-txt": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/logs-graphs-verified-trig": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/docs-adr-001-llm-as-executor-only-md": "depth 1 removed — over token budget",
+    "https://ontologist.ai/ns/oe/module/core-shacl-databook-shapes-ttl": "depth 1 removed — over token budget"
+  }
+}

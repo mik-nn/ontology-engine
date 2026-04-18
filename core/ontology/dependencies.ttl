@@ -1,0 +1,21 @@
+@prefix build: <https://ontologist.ai/ns/build#> .
+@prefix oe:    <https://ontologist.ai/ns/oe/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+build:rdflib
+    a build:PythonPackage ;
+    build:name "rdflib" ;
+    build:version ">=7.0.0" ;
+    build:requiredBy oe:OntologyEngine .
+
+build:pyyaml
+    a build:PythonPackage ;
+    build:name "pyyaml" ;
+    build:version ">=6.0" ;
+    build:requiredBy oe:DatabookConverter .
+
+build:pyshacl
+    a build:PythonPackage ;
+    build:name "pyshacl" ;
+    build:version ">=0.25" ;
+    build:requiredBy oe:Validator .

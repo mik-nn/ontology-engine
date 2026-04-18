@@ -1,0 +1,27 @@
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix build: <https://ontologist.ai/ns/build#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+build:PythonPackageShape
+    a sh:NodeShape ;
+    sh:targetClass build:PythonPackage ;
+
+    sh:property [
+        sh:path build:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A PythonPackage must have a name." ;
+    ] ;
+
+    sh:property [
+        sh:path build:version ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A PythonPackage must have a version constraint." ;
+    ] ;
+
+    sh:property [
+        sh:path build:requiredBy ;
+        sh:minCount 1 ;
+        sh:message "A PythonPackage must be required by at least one component." ;
+    ] .

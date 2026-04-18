@@ -1,0 +1,139 @@
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix oe:    <https://ontologist.ai/ns/oe/> .
+@prefix db:    <https://ontologist.ai/ns/databook#> .
+@prefix build: <https://ontologist.ai/ns/build#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+# ──────────────────────────────────────────────────────────
+# Rule R01: Databook must have a non-empty title
+# ──────────────────────────────────────────────────────────
+oe:DatabookTitleRule
+    a sh:NodeShape ;
+    sh:targetClass db:Databook ;
+    sh:severity sh:Violation ;
+    sh:message "R01: Databook has an empty or missing title." ;
+    sh:property [
+        sh:path db:title ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:minLength 1 ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R02: Databook must declare a transformer type
+# ──────────────────────────────────────────────────────────
+oe:DatabookTransformerRule
+    a sh:NodeShape ;
+    sh:targetClass db:Databook ;
+    sh:severity sh:Warning ;
+    sh:message "R02: Databook is missing a process.transformer declaration (expected: human|llm|sparql|xslt)." ;
+    sh:property [
+        sh:path db:transformer ;
+        sh:minCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R03: Every Event must carry a timestamp
+# ──────────────────────────────────────────────────────────
+oe:EventTimestampRule
+    a sh:NodeShape ;
+    sh:targetClass oe:Event ;
+    sh:severity sh:Violation ;
+    sh:message "R03: Event is missing a prov:startedAtTime timestamp." ;
+    sh:property [
+        sh:path <http://www.w3.org/ns/prov#startedAtTime> ;
+        sh:minCount 1 ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R04: TaskHolon — valid status values
+# ──────────────────────────────────────────────────────────
+oe:TaskStatusRule
+    a sh:NodeShape ;
+    sh:targetClass oe:TaskHolon ;
+    sh:severity sh:Violation ;
+    sh:message "R04: TaskHolon has an invalid status value." ;
+    sh:property [
+        sh:path oe:hasStatus ;
+        sh:minCount 1 ;
+        sh:in ( "pending" "active" "completed" "failed" "skipped" ) ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R05: ExplainTask must be assigned to LLM executor
+# ──────────────────────────────────────────────────────────
+oe:ExplainTaskExecutorRule
+    a sh:NodeShape ;
+    sh:targetClass oe:ExplainTask ;
+    sh:severity sh:Warning ;
+    sh:message "R05: ExplainTask should declare hasExecutor = 'llm'." ;
+    sh:sparql [
+        sh:message "R05: ExplainTask must use LLM executor, not '{?exec}'." ;
+        sh:severity sh:Warning ;
+        sh:select """
+            PREFIX oe: <https://ontologist.ai/ns/oe/>
+            SELECT $this ?exec WHERE {
+                $this oe:hasExecutor ?exec .
+                FILTER (?exec != "llm")
+            }
+        """ ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R06: ImplementTask must reference a git executor
+# ──────────────────────────────────────────────────────────
+oe:ImplementTaskGitRule
+    a sh:NodeShape ;
+    sh:targetClass oe:ImplementTask ;
+    sh:severity sh:Warning ;
+    sh:message "R06: ImplementTask should declare hasExecutor = 'git_client' or 'llm'." ;
+    sh:sparql [
+        sh:message "R06: ImplementTask uses unknown executor '{?exec}'." ;
+        sh:severity sh:Warning ;
+        sh:select """
+            PREFIX oe: <https://ontologist.ai/ns/oe/>
+            SELECT $this ?exec WHERE {
+                $this oe:hasExecutor ?exec .
+                FILTER (?exec NOT IN ("llm", "git_client"))
+            }
+        """ ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R07: Plan must contain at least one Subtask
+# ──────────────────────────────────────────────────────────
+oe:PlanHasSubtasksRule
+    a sh:NodeShape ;
+    sh:targetClass oe:Plan ;
+    sh:severity sh:Violation ;
+    sh:message "R07: Plan must contain at least one Subtask." ;
+    sh:sparql [
+        sh:message "R07: Plan '{$this}' has no Subtasks." ;
+        sh:severity sh:Violation ;
+        sh:select """
+            PREFIX oe:  <https://ontologist.ai/ns/oe/>
+            PREFIX cga: <https://ontologist.ai/ns/cga/>
+            SELECT $this WHERE {
+                FILTER NOT EXISTS {
+                    ?sub a oe:Subtask ;
+                         cga:partOf $this .
+                }
+            }
+        """ ;
+    ] .
+
+# ──────────────────────────────────────────────────────────
+# Rule R08: PythonPackage must declare a non-empty version constraint
+# ──────────────────────────────────────────────────────────
+oe:PackageVersionRule
+    a sh:NodeShape ;
+    sh:targetClass build:PythonPackage ;
+    sh:severity sh:Warning ;
+    sh:message "R08: PythonPackage is missing a version constraint." ;
+    sh:property [
+        sh:path build:version ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:minLength 1 ;
+    ] .

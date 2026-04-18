@@ -1,0 +1,377 @@
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix cga:   <https://ontologist.ai/ns/cga/> .
+@prefix build: <https://ontologist.ai/ns/build#> .
+@prefix db:    <https://ontologist.ai/ns/databook#> .
+@prefix oe:    <https://ontologist.ai/ns/oe/> .
+
+# ──────────────────────────────────────────────────────────
+# Holon Architecture (Four-Graph Model)
+# Each Holon declares four named graphs:
+#   interior  — authoritative assertions
+#   boundary  — SHACL shapes, portal definitions
+#   projection — curated outward interface
+#   context   — provenance, structural membership
+# ──────────────────────────────────────────────────────────
+
+cga:Holon a owl:Class ;
+    rdfs:label "Holon" ;
+    rdfs:comment "Self-contained unit that is simultaneously whole and part of a larger system." .
+
+cga:hasInteriorGraph a owl:ObjectProperty ;
+    rdfs:domain cga:Holon ;
+    rdfs:label "has interior graph" .
+
+cga:hasBoundaryGraph a owl:ObjectProperty ;
+    rdfs:domain cga:Holon ;
+    rdfs:label "has boundary graph" .
+
+cga:hasProjectionGraph a owl:ObjectProperty ;
+    rdfs:domain cga:Holon ;
+    rdfs:label "has projection graph" .
+
+cga:hasContextGraph a owl:ObjectProperty ;
+    rdfs:domain cga:Holon ;
+    rdfs:label "has context graph" .
+
+cga:partOf a owl:ObjectProperty ;
+    rdfs:label "part of" .
+
+cga:memberOf a owl:ObjectProperty ;
+    rdfs:label "member of" .
+
+cga:holonDepth a owl:DatatypeProperty ;
+    rdfs:domain cga:Holon ;
+    rdfs:range xsd:integer ;
+    rdfs:label "holon depth" .
+
+# ──────────────────────────────────────────────────────────
+# Ontology Engine Holon Subclasses
+# ──────────────────────────────────────────────────────────
+
+oe:ProjectHolon a owl:Class ;
+    rdfs:subClassOf cga:Holon ;
+    rdfs:label "Project Holon" .
+
+oe:ModuleHolon a owl:Class ;
+    rdfs:subClassOf cga:Holon ;
+    rdfs:label "Module Holon" .
+
+oe:CodeModule a owl:Class ;
+    rdfs:subClassOf oe:ModuleHolon ;
+    rdfs:label "Code Module" .
+
+oe:DataModule a owl:Class ;
+    rdfs:subClassOf oe:ModuleHolon ;
+    rdfs:label "Data Module" .
+
+oe:ServiceModule a owl:Class ;
+    rdfs:subClassOf oe:ModuleHolon ;
+    rdfs:label "Service Module" .
+
+oe:ConfigModule a owl:Class ;
+    rdfs:subClassOf oe:ModuleHolon ;
+    rdfs:label "Config Module" .
+
+oe:TaskHolon a owl:Class ;
+    rdfs:subClassOf cga:Holon ;
+    rdfs:label "Task Holon" .
+
+oe:AnalysisTask a owl:Class ;
+    rdfs:subClassOf oe:TaskHolon ;
+    rdfs:label "Analysis Task" .
+
+oe:DesignTask a owl:Class ;
+    rdfs:subClassOf oe:TaskHolon ;
+    rdfs:label "Design Task" .
+
+oe:ExplainTask a owl:Class ;
+    rdfs:subClassOf oe:TaskHolon ;
+    rdfs:label "Explain Task" .
+
+oe:ImplementTask a owl:Class ;
+    rdfs:subClassOf oe:TaskHolon ;
+    rdfs:label "Implement Task" .
+
+oe:RefactorTask a owl:Class ;
+    rdfs:subClassOf oe:TaskHolon ;
+    rdfs:label "Refactor Task" .
+
+oe:PipelineHolon a owl:Class ;
+    rdfs:subClassOf cga:Holon ;
+    rdfs:label "Pipeline Holon" .
+
+# ──────────────────────────────────────────────────────────
+# Code introspection descriptors (NOT Holons — structural facts only)
+# Created by Stage 2 CodeParser; referenced by Stage 7 Planning.
+# ──────────────────────────────────────────────────────────
+
+oe:CodeFunction a owl:Class ;
+    rdfs:label "Code Function" ;
+    rdfs:comment "A function or method defined in a source file. Discovered by CodeParser." .
+
+oe:CodeClass a owl:Class ;
+    rdfs:label "Code Class" ;
+    rdfs:comment "A class defined in a source file. Discovered by CodeParser." .
+
+oe:functionName a owl:DatatypeProperty ;
+    rdfs:domain oe:CodeFunction ;
+    rdfs:range xsd:string .
+
+oe:className a owl:DatatypeProperty ;
+    rdfs:domain oe:CodeClass ;
+    rdfs:range xsd:string .
+
+oe:definedIn a owl:ObjectProperty ;
+    rdfs:label "defined in" .
+
+oe:lineNumber a owl:DatatypeProperty ;
+    rdfs:range xsd:integer .
+
+# ──────────────────────────────────────────────────────────
+# Planning
+# ──────────────────────────────────────────────────────────
+
+oe:Plan a owl:Class ;
+    rdfs:label "Plan" .
+
+oe:Subtask a owl:Class ;
+    rdfs:label "Subtask" .
+
+oe:dependsOn a owl:ObjectProperty ;
+    rdfs:label "depends on" .
+
+oe:hasStatus a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "has status" .
+
+oe:hasExecutor a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "has executor" .
+
+oe:planRequest a owl:DatatypeProperty ;
+    rdfs:domain oe:Plan ;
+    rdfs:range xsd:string ;
+    rdfs:label "original user request" .
+
+oe:planType a owl:DatatypeProperty ;
+    rdfs:domain oe:Plan ;
+    rdfs:range xsd:string ;
+    rdfs:label "classified task type" .
+
+oe:taskName a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "task name" .
+
+oe:description a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "description" .
+
+oe:executionOrder a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "execution order" .
+
+oe:subtaskIndex a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "subtask index" .
+
+oe:concernsEntity a owl:ObjectProperty ;
+    rdfs:label "concerns entity" .
+
+oe:outputSummary a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "output summary" .
+
+oe:executorUsed a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "executor used" .
+
+oe:subtaskUri a owl:ObjectProperty ;
+    rdfs:label "subtask URI" .
+
+oe:stepCount a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "step count" .
+
+# ──────────────────────────────────────────────────────────
+# Event-First Model (aligned with ground truth)
+# Events are first-class — predicates are materialised views.
+# Four-question test: provenance? temporality? conditionality? agency?
+# If any is yes, model an event node, not a bare predicate.
+# ──────────────────────────────────────────────────────────
+
+oe:Event a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Pipeline Event" .
+
+oe:ProjectScanned a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Project Scanned" .
+
+oe:ModuleDetected a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Module Detected" .
+
+oe:ExternalKnowledgeAdded a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "External Knowledge Added" .
+
+oe:UserAnswerReceived a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "User Answer Received" .
+
+oe:OntologyValidated a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Ontology Validated" .
+
+oe:ContextBuilt a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Context Built" .
+
+oe:TaskDecomposed a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Task Decomposed" .
+
+oe:PlanGenerated a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Plan Generated" .
+
+oe:PlanExecuted a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Plan Executed" .
+
+oe:GitCommitPushed a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Git Commit Pushed" .
+
+oe:DocumentationSynced a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Documentation Synced" .
+
+oe:DatabookUpdated a owl:Class ;
+    rdfs:subClassOf oe:Event ;
+    rdfs:label "Databook Updated" .
+
+# ──────────────────────────────────────────────────────────
+# Context Engine
+# ──────────────────────────────────────────────────────────
+
+oe:ContextPacket a owl:Class ;
+    rdfs:label "Context Packet" ;
+    rdfs:comment "A validated subgraph bundle delivered to an LLM Executor Agent." .
+
+oe:anchorUri a owl:ObjectProperty ;
+    rdfs:domain oe:ContextPacket ;
+    rdfs:label "anchor URI" .
+
+oe:tokenEstimate a owl:DatatypeProperty ;
+    rdfs:domain oe:ContextPacket ;
+    rdfs:range xsd:integer ;
+    rdfs:label "token estimate" .
+
+oe:tripleCount a owl:DatatypeProperty ;
+    rdfs:domain oe:ContextPacket ;
+    rdfs:range xsd:integer ;
+    rdfs:label "triple count" .
+
+oe:depthUsed a owl:DatatypeProperty ;
+    rdfs:domain oe:ContextPacket ;
+    rdfs:range xsd:integer ;
+    rdfs:label "BFS depth used" .
+
+oe:hasAgent a owl:DatatypeProperty ;
+    rdfs:domain oe:Event ;
+    rdfs:range xsd:string ;
+    rdfs:label "has agent" .
+
+oe:hasTask a owl:ObjectProperty ;
+    rdfs:domain oe:Event ;
+    rdfs:label "has task" .
+
+oe:hasResult a owl:ObjectProperty ;
+    rdfs:domain oe:Event ;
+    rdfs:label "has result" .
+
+# ──────────────────────────────────────────────────────────
+# Build / Dependency vocabulary
+# ──────────────────────────────────────────────────────────
+
+build:PythonPackage a owl:Class ;
+    rdfs:label "Python Package" .
+
+build:name a owl:DatatypeProperty ;
+    rdfs:domain build:PythonPackage ;
+    rdfs:range xsd:string ;
+    rdfs:label "package name" .
+
+build:version a owl:DatatypeProperty ;
+    rdfs:domain build:PythonPackage ;
+    rdfs:range xsd:string ;
+    rdfs:label "version constraint" .
+
+build:requiredBy a owl:ObjectProperty ;
+    rdfs:label "required by" .
+
+build:Stage a owl:Class ;
+    rdfs:label "Build Stage" .
+
+build:Target a owl:Class ;
+    rdfs:label "Build Target" .
+
+build:Source a owl:Class ;
+    rdfs:label "Build Source" .
+
+build:dependsOn a owl:ObjectProperty ;
+    rdfs:label "depends on" .
+
+# ──────────────────────────────────────────────────────────
+# Databook (aligned with ground truth canonical schema)
+# Databook is a prov:Entity — provenance tracking via PROV-O
+# ──────────────────────────────────────────────────────────
+
+db:Databook a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Databook" .
+
+db:id a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "identifier" .
+
+db:title a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "title" .
+
+db:version a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "version" .
+
+db:type a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "type" .
+
+db:created a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "created date" .
+
+db:license a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "license" .
+
+db:transformer a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "transformer type" ;
+    rdfs:comment "One of: human, llm, sparql, xslt" .
+
+db:content a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "content body" .
