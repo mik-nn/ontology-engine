@@ -106,8 +106,14 @@ class LLMExecutor:
         task_description: str,
         context: ContextPacket,
         ai_todos: list[dict] | None = None,
+        target_file: str | None = None,
+        target_file_content: str | None = None,
     ) -> LLMResult:
-        user_msg = self._build_user(task_description, context, ai_todos)
+        user_msg = self._build_user(
+            task_description, context, ai_todos,
+            target_file=target_file,
+            target_file_content=target_file_content,
+        )
         result = self._adapter.complete(
             system=_SYSTEM,
             user=user_msg,
@@ -137,16 +143,31 @@ class LLMExecutor:
         task_description: str,
         context: ContextPacket,
         ai_todos: list[dict] | None,
+        target_file: str | None = None,
+        target_file_content: str | None = None,
     ) -> str:
-        parts = [
-            context.to_prompt_text(),
-            f"## TASK\n{task_description}",
-        ]
+        parts = [context.to_prompt_text()]
+
+        if target_file and target_file_content is not None:
+            parts.append(
+                f"## TARGET FILE\n{target_file}\n\n"
+                f"## CURRENT CONTENT\n```python\n{target_file_content}\n```"
+            )
+
+        parts.append(f"## TASK\n{task_description}")
+
         if ai_todos:
             todo_lines = [
                 f"  - {t.get('function', '?')} in {t.get('file', '?')}: {t.get('reason', '')}"
                 for t in ai_todos[:10]
             ]
             parts.append("## AI-TODO (stubs in scope)\n" + "\n".join(todo_lines))
-        parts.append("Implement the task. Output implementation only.")
+
+        if target_file:
+            parts.append(
+                f"Output the COMPLETE new content of {target_file}. "
+                "No markdown fences, no explanation — file content only."
+            )
+        else:
+            parts.append("Implement the task. Output implementation only.")
         return "\n\n".join(parts)

@@ -9,6 +9,7 @@ pyproject.toml
 ./cli/commands/introspect.py
 ./cli/commands/run.py
 ./cli/commands/status.py
+./cli/commands/tools.py
 ./cli/commands/verify.py
 ./cli/commands/visualize.py
 ./context/__init__.py
@@ -23,6 +24,10 @@ pyproject.toml
 ./execution/adapters/claude_code.py
 ./execution/adapters/factory.py
 ./execution/adapters/litellm_adapter.py
+./execution/tools/__init__.py
+./execution/tools/base.py
+./execution/tools/git_tools.py
+./execution/tools/registry.py
 ./interaction/__init__.py
 ./interaction/interviewer.py
 ./interaction/user_feedback.py
@@ -65,6 +70,7 @@ cli/commands/init.py
 cli/commands/introspect.py
 cli/commands/run.py
 cli/commands/status.py
+cli/commands/tools.py
 cli/commands/verify.py
 cli/commands/visualize.py
 context/__init__.py
@@ -79,6 +85,10 @@ execution/adapters/base.py
 execution/adapters/claude_code.py
 execution/adapters/factory.py
 execution/adapters/litellm_adapter.py
+execution/tools/__init__.py
+execution/tools/base.py
+execution/tools/git_tools.py
+execution/tools/registry.py
 interaction/__init__.py
 interaction/interviewer.py
 interaction/user_feedback.py

@@ -91,6 +91,12 @@ class PipelineOrchestrator:
     def run(self, request: str, graph_path: Optional[str] = None) -> PipelineRun:
         run = PipelineRun(request=request, graph_path=graph_path)
 
+        # ── Tool fast-path: deterministic tools skip the full pipeline ─────────
+        tool_result = self._try_tool(run)
+        if tool_result is not None:
+            return run
+        # ── Full pipeline ──────────────────────────────────────────────────────
+
         transitions = [
             (PipelineState.INTROSPECTING, self._stage_introspect),
             (PipelineState.INTERVIEWING,  self._stage_interview),
@@ -135,6 +141,48 @@ class PipelineOrchestrator:
             self._print(f"\nPipeline FAILED: {run.errors[-1]}")
 
         return run
+
+    # ──────────────────────────────────────────────
+    # Tool fast-path
+    # ──────────────────────────────────────────────
+
+    def _try_tool(self, run: PipelineRun):
+        """Check the tool registry before running the full pipeline.
+
+        Returns the ToolResult if a tool handled the request, else None.
+        """
+        import execution.tools.git_tools  # ensure tools are registered  # noqa: F401
+        from execution.tools.registry import get_registry
+        registry = get_registry()
+        result = registry.dispatch(run.request, git=self.git, store=self.store)
+        if result is None:
+            return None
+
+        self._print(f"\n{'='*50}")
+        self._print(f"Tool: {result.tool_name}")
+        self._print(f"{'='*50}")
+        result.print()
+
+        if result.success:
+            run.state = PipelineState.COMPLETED
+            self.logger.log(
+                "ToolExecuted",
+                agent="ToolRegistry",
+                status="completed",
+                toolName=result.tool_name,
+                output=result.output[:200],
+            )
+            self._print("\nCompleted via tool (no pipeline needed).")
+        else:
+            run.fail(f"Tool {result.tool_name} failed: {result.error}")
+            self.logger.log(
+                "ToolExecuted",
+                agent="ToolRegistry",
+                status="failed",
+                toolName=result.tool_name,
+                errorMessage=result.error or "",
+            )
+        return result
 
     # ──────────────────────────────────────────────
     # Stage handlers

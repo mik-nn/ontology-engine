@@ -105,12 +105,42 @@ class TaskClassifier:
     # ──────────────────────────────────────────────
 
     def _mode2(self, request: str, fallback: ClassificationResult) -> ClassificationResult:
-        # Stage 8 will wire the actual LLM call here.
-        # For now return the Mode 1 result with mode annotated.
+        """Ask the LLM to classify the intent when keyword scoring is below threshold."""
+        try:
+            from cli.config import find_config, load_config
+            from execution.adapters import factory
+            cfg = load_config(find_config()).get("llm", {"provider": "claude-code"})
+            adapter = factory.create(cfg)
+
+            system = (
+                "You are a task classifier. Given a user request, output ONLY a JSON object "
+                "with keys: task_type (one of ExplainTask, ImplementTask, RefactorTask, "
+                "AnalysisTask, DesignTask, GitTask) and confidence (float 0-1). "
+                "No other text."
+            )
+            user = f"Classify: {request}"
+            result = adapter.complete(system=system, user=user, max_tokens=64)
+
+            import json, re
+            m = re.search(r'\{[^}]+\}', result.output)
+            if m:
+                parsed = json.loads(m.group(0))
+                task_type = parsed.get("task_type", fallback.task_type)
+                if task_type not in _TASK_TYPES:
+                    task_type = fallback.task_type
+                return ClassificationResult(
+                    task_type=task_type,
+                    confidence=float(parsed.get("confidence", 0.6)),
+                    mode_used="llm",
+                    raw_request=request,
+                    scores=fallback.scores,
+                )
+        except Exception:
+            pass  # fall through to fallback on any error
         return ClassificationResult(
             task_type=fallback.task_type,
-            confidence=max(fallback.confidence, 0.5),  # stub: assume LLM is confident
-            mode_used="llm_stub",
+            confidence=max(fallback.confidence, 0.5),
+            mode_used="llm_fallback",
             raw_request=request,
             scores=fallback.scores,
         )

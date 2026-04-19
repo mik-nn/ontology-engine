@@ -118,7 +118,7 @@ class PlanExecutor:
             if node.executor == "reasoning":
                 output = self._exec_reasoning(node, pruned)
             elif node.executor == "llm":
-                output = self._exec_llm(node, pruned)
+                output = self._exec_llm(node, pruned, spec)
             elif node.executor == "git_client":
                 output = self._exec_git(node, pruned)
             else:
@@ -150,7 +150,10 @@ class PlanExecutor:
         return (f"Reasoning completed: {triples} triples analysed, "
                 f"{entities} entities in scope.")
 
-    def _exec_llm(self, node: SubtaskNode, ctx) -> str:
+    # Write-subtask names that should produce file content and write it to disk
+    _WRITE_SUBTASKS = {"write-code", "apply-changes", "generate-explanation"}
+
+    def _exec_llm(self, node: SubtaskNode, ctx, spec: "PlanSpec") -> str:
         from execution.llm_executor import LLMExecutor
         from cli.config import find_config, load_config
         cfg_path = find_config()
@@ -158,14 +161,45 @@ class PlanExecutor:
 
         ai_todos = self._collect_ai_todos(ctx.anchor_uri)
         executor = LLMExecutor.from_config(llm_cfg)
+
+        # For write subtasks: resolve target file and feed current content to LLM
+        target_file: str | None = None
+        target_content: str | None = None
+        if node.name in self._WRITE_SUBTASKS:
+            target_file = self._resolve_target_file(spec)
+            if target_file:
+                try:
+                    from pathlib import Path
+                    target_content = Path(target_file).read_text(encoding="utf-8")
+                except OSError:
+                    target_content = ""
+
+        # Enrich the task description with original user request
+        task_desc = node.description
+        if spec.original_request and node.name in self._WRITE_SUBTASKS:
+            task_desc = f"Original request: {spec.original_request}\n\n{task_desc}"
+
         result = executor.run(
-            task_description=node.description,
+            task_description=task_desc,
             context=ctx,
             ai_todos=ai_todos,
+            target_file=target_file,
+            target_file_content=target_content,
         )
         self._store_llm_output(node, result.output)
-        return (f"LLM completed ({result.summary}). "
-                f"Output: {result.output[:120].strip()}")
+
+        # Write code to disk for write-subtasks
+        written = ""
+        if node.name in self._WRITE_SUBTASKS and target_file and result.output.strip():
+            written = self._write_file(target_file, result.output)
+            self._mark_todos_resolved(target_file)
+
+        summary = f"LLM completed ({result.summary})."
+        if written:
+            summary += f" {written}"
+        else:
+            summary += f" Output: {result.output[:80].strip()}"
+        return summary
 
     def _exec_git(self, node: SubtaskNode, ctx) -> str:
         from pipeline.git_client import GitClient, GitCommitResult, GitPushResult
@@ -240,6 +274,45 @@ class PlanExecutor:
             }
             for r in results
         ]
+
+    def _resolve_target_file(self, spec: "PlanSpec") -> str | None:
+        """Return a file path from matched entities or by parsing the original request."""
+        import re
+        # 1. matched entity → oe:filePath in graph
+        for uri in spec.matched_entities:
+            from rdflib import URIRef
+            fp = self.store._g.value(URIRef(uri), OE.filePath)
+            if fp:
+                return str(fp)
+        # 2. extract *.py path from the request text
+        m = re.search(r'[\w./\\-]+\.py\b', spec.original_request)
+        if m:
+            return m.group(0)
+        return None
+
+    def _write_file(self, path: str, content: str) -> str:
+        """Write LLM output to a file. Strips accidental markdown fences."""
+        import re as _re
+        from pathlib import Path
+        # Strip outermost ```python / ``` fences if the model added them
+        cleaned = _re.sub(r'^```[a-z]*\n?', '', content.strip())
+        cleaned = _re.sub(r'\n?```$', '', cleaned)
+        Path(path).write_text(cleaned, encoding="utf-8")
+        return f"Written → {path} ({len(cleaned)} chars)"
+
+    def _mark_todos_resolved(self, file_path: str) -> None:
+        """Mark all oe:AITodo nodes for a file as resolved in the graph."""
+        results = list(self.store._g.query(f"""
+            PREFIX oe: <https://ontologist.ai/ns/oe/>
+            SELECT ?todo ?g WHERE {{
+                GRAPH ?g {{ ?todo a oe:AITodo ; oe:filePath ?fp .
+                           FILTER(str(?fp) = "{file_path}") }}
+            }}
+        """))
+        for row in results:
+            todo_uri = row.todo
+            g_uri = row.g
+            self.store.add(todo_uri, OE.hasStatus, Literal("resolved"), g_uri)
 
     def _store_llm_output(self, node: SubtaskNode, output: str) -> None:
         sub_uri = URIRef(node.uri)

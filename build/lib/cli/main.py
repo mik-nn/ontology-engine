@@ -4,7 +4,7 @@ from __future__ import annotations
 import typer
 from rich.console import Console
 
-from cli.commands import run, verify, introspect, status, init, ai_todo, visualize
+from cli.commands import run, verify, introspect, status, init, ai_todo, visualize, tools
 
 app = typer.Typer(
     name="ont",
@@ -21,6 +21,7 @@ app.add_typer(status.app,     name="status")
 app.add_typer(init.app,       name="init")
 app.add_typer(ai_todo.app,    name="ai-todo")
 app.add_typer(visualize.app,  name="visualize")
+app.add_typer(tools.app,      name="tools")
 
 
 @app.callback()
