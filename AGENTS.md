@@ -31,11 +31,11 @@ No LLM agent decides what to do next. The `PipelineOrchestrator` reads the ontol
 ### EnrichmentAgent
 **Module:** `enrichment/`  
 **Trigger:** Pipeline event `OntologyValidated` with gap flags, or explicit `enrich` task  
-**Inputs:** SPARQL query result (entities needing enrichment), Tawily client config  
+**Inputs:** SPARQL query result (entities needing enrichment), Tavily client config  
 **Outputs:** RDF triples — external standards, protocols, best-practices added to graph  
 **Components:**
-- `tawily_client.py` — web search/scraping via Tawily API, returns structured JSON
-- `external_mapper.py` — maps Tawily results to ontology classes, generates stable URIs via `id_manager`
+- `tavily_client.py` — web search/scraping via Tavily API, returns structured JSON
+- `external_mapper.py` — maps Tavily results to ontology classes, generates stable URIs via `id_manager`
 **SHACL constraint:** All newly added entities must pass their NodeShape before `GraphUpdater` writes them.  
 **Emits events:** `ExternalKnowledgeAdded`
 

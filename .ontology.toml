@@ -1,0 +1,41 @@
+[project]
+name = "ontology-engine"
+graph_dir = "logs/graphs"
+shacl_shapes = [
+    "core/shacl/databook_shapes.ttl",
+    "core/shacl/dependencies_shapes.ttl",
+    "core/shacl/planning_shapes.ttl",
+]
+
+[pipeline]
+auto   = false
+commit = false
+push   = false
+
+# ── LLM Provider ─────────────────────────────────────────────────────────────
+# provider = "claude-code"   → Pro subscription via claude CLI (default, no API key)
+# provider = "anthropic"     → Anthropic API (needs ANTHROPIC_API_KEY)
+# provider = "ollama"        → local Ollama (needs base_url)
+# provider = "gemini"        → Google Gemini (needs GEMINI_API_KEY)
+# provider = "openai"        → OpenAI (needs OPENAI_API_KEY)
+# provider = "litellm"       → any LiteLLM model string
+[llm]
+provider         = "claude-code"
+model            = "claude-sonnet-4-6"
+verbose          = false          # print LLM output during execution
+thinking         = false          # extended thinking (anthropic provider only)
+thinking_budget  = 8000           # max thinking tokens (< max_tokens)
+
+# Examples (uncomment to switch provider):
+# provider = "ollama"
+# model    = "llama3.2"
+# base_url = "http://localhost:11434"
+
+# provider = "gemini"
+# model    = "gemini-2.0-flash"
+# api_key_env = "GEMINI_API_KEY"
+
+# provider = "anthropic"
+# model    = "claude-sonnet-4-6"
+# thinking = true
+# thinking_budget = 10000

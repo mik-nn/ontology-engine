@@ -1,0 +1,2 @@
+[console_scripts]
+ont = cli.main:app

@@ -1,8 +1,9 @@
+---
 created: '2026-04-18'
 id: implementation_plan
 process:
   transformer: human
-synced_at: '2026-04-18T18:09:01.035028+00:00'
+synced_at: '2026-04-19T18:27:03.237621+00:00'
 title: Implementation Plan for Ontology Engine
 type: architecture
 version: 1.0.0
@@ -44,7 +45,7 @@ databook:
 1. Строит онтологию проекта на основе:
    - запроса пользователя,
    - структуры существующего проекта,
-   - данных из интернета (Tawily),
+   - данных из интернета (Tavily),
    - интерактивного интервьюирования.
 
 2. Обогащает онтологию:
@@ -81,7 +82,7 @@ introspection/
   doc_parser.py  
 
 enrichment/  
-  tawily_client.py  
+  tavily_client.py  
   external_mapper.py  
 
 interaction/  

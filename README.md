@@ -6,7 +6,7 @@
 
 - core/ — онтология, SHACL, правила
 - introspection/ — анализ существующего проекта
-- enrichment/ — обогащение через Tawily
+- enrichment/ — обогащение через Tavily
 - interaction/ — интервьюирование пользователя
 - verification/ — SHACL + rule engine
 - context/ — формирование контекстов

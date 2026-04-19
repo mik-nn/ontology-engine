@@ -5,3 +5,4 @@ logs/graph/
 .github/
 *.log
 *.trig
+*.pyc

@@ -1,3 +1,7 @@
+"""Converts a Databook Markdown file (YAML front-matter + body) to RDF Turtle.
+
+Usage: python3 md_to_rdf.py <input.md> <output.ttl>
+"""
 import sys
 import yaml
 from rdflib import Graph, Namespace, Literal, RDF, URIRef

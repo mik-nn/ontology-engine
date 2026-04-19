@@ -34,7 +34,7 @@ databook:
 1. Строит онтологию проекта на основе:
    - запроса пользователя,
    - структуры существующего проекта,
-   - данных из интернета (Tawily),
+   - данных из интернета (Tavily),
    - интерактивного интервьюирования.
 
 2. Обогащает онтологию:
@@ -71,7 +71,7 @@ introspection/
   doc_parser.py  
 
 enrichment/  
-  tawily_client.py  
+  tavily_client.py  
   external_mapper.py  
 
 interaction/  
@@ -223,7 +223,7 @@ api/
 
 ---
 
-# 6. External Enrichment Layer (Tawily)
+# 6. External Enrichment Layer (Tavily)
 
 ## 6.1. Запросы
 - По ключевым словам проекта.  
@@ -415,8 +415,8 @@ api/
 - code_parser  
 - doc_parser  
 
-## Этап 3. Enrichment (Tawily)
-- tawily_client  
+## Этап 3. Enrichment (Tavily)
+- tavily_client  
 - external_mapper  
 
 ## Этап 4. Interview Layer

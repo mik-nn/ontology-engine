@@ -73,6 +73,9 @@
 <div id="legend" id="legend"></div>
 
 <script>
+// Embedded data injected by pipeline/visualize.py (works with file:// — no CORS)
+// Falls back to fetch for HTTP server usage.
+const GRAPH_EMBEDDED = null; /* __GRAPH_DATA__ */
 const GRAPH_JSON = "../../logs/graphs/graph.json";
 
 const GROUP_COLORS = {
@@ -91,14 +94,18 @@ let activeGroups = new Set();
 
 async function init() {
   let data;
-  try {
-    const resp = await fetch(GRAPH_JSON);
-    if (!resp.ok) throw new Error(resp.statusText);
-    data = await resp.json();
-  } catch (e) {
-    document.getElementById("stats").textContent =
-      "⚠ Could not load graph.json — run pipeline/visualize.py first.";
-    return;
+  if (GRAPH_EMBEDDED) {
+    data = GRAPH_EMBEDDED;
+  } else {
+    try {
+      const resp = await fetch(GRAPH_JSON);
+      if (!resp.ok) throw new Error(resp.statusText);
+      data = await resp.json();
+    } catch (e) {
+      document.getElementById("stats").textContent =
+        "⚠ No graph data — run: ont visualize";
+      return;
+    }
   }
 
   allNodes = data.nodes;

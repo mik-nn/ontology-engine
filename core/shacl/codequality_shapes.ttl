@@ -1,0 +1,27 @@
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix oe:  <https://ontologist.ai/ns/oe/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Every CodeModule must have a file path (Violation — structural integrity).
+# Every CodeModule should have a description — module docstring (Warning — surfaced as G04).
+# The LLM executor is instructed to always generate docstrings, so
+# files it creates will always pass. Manually written files surface as G04.
+oe:CodeModuleShape
+    a sh:NodeShape ;
+    sh:targetClass oe:CodeModule ;
+
+    sh:property [
+        sh:path     oe:filePath ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message  "CodeModule must record its file path (structural invariant)." ;
+    ] ;
+
+    sh:property [
+        sh:path     oe:description ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:severity sh:Warning ;
+        sh:message  "[G04] CodeModule has no description — add a module-level docstring." ;
+    ] .

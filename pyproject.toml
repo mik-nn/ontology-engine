@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ontology-engine"
+version = "0.1.0"
+description = "Ontology-driven pipeline engine — SHACL-verified, LLM as atomic executor"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "rdflib>=7.0.0",
+    "pyshacl>=0.25",
+    "pyyaml>=6.0",
+    "tomli>=2.0; python_version < '3.11'",
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+litellm = ["litellm>=1.40"]
+all-providers = ["litellm>=1.40"]
+
+[project.scripts]
+ont = "cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli*", "pipeline*", "introspection*", "verification*", "planning*", "context*", "interaction*", "enrichment*", "storage*", "execution*"]
+
+[tool.setuptools.package-dir]
+"" = "."
