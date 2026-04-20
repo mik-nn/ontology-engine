@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import Optional
 from rdflib import Namespace, RDF
 
 from storage.graph_store import GraphStore
@@ -73,6 +74,45 @@ _RULES: list[tuple[str, str, float]] = [
 
 _TASK_TYPES: set[str] = set(ALL_TYPES)
 _CONFIDENCE_THRESHOLD = 0.45   # below this → micro-model (Mode 2)
+
+# ──────────────────────────────────────────────────────────
+# Mode 0: ontology-driven SPARQL classification
+#
+# Entity supertype → preferred task types (ordered by preference).
+# Keys are local names from oe:/db:/build: namespaces.
+# After reason() these are transitively materialized, so
+# oe:CodeModule → oe:ModuleHolon → cga:Holon all appear.
+# ──────────────────────────────────────────────────────────
+_ENTITY_TYPE_TASKS: dict[str, list[str]] = {
+    "CodeModule":     ["ImplementTask", "RefactorTask", "ExplainTask", "AnalysisTask"],
+    "CodeFunction":   ["ImplementTask", "RefactorTask", "ExplainTask"],
+    "CodeClass":      ["ImplementTask", "RefactorTask", "ExplainTask"],
+    "Databook":       ["DocumentTask",  "ExplainTask"],
+    "Plan":           ["AnalysisTask",  "ExplainTask"],
+    "Subtask":        ["AnalysisTask"],
+    "Event":          ["AnalysisTask"],
+    "PythonPackage":  ["MigrateTask",   "AnalysisTask"],
+    "ModuleHolon":    ["ImplementTask", "RefactorTask", "ExplainTask"],
+    "TaskHolon":      ["AnalysisTask",  "ExplainTask"],
+}
+
+# Simple verb → task (coarse; combined with entity type for confidence boost)
+_VERB_TASK: list[tuple[str, str]] = [
+    # Specific patterns first — prevent "write" from swallowing "write docs"
+    (r"\b(document|write docs?|write documentation|readme|databook|docstring|changelog)\b", "DocumentTask"),
+    (r"\b(run tests?|validate|run pytest|check shacl)\b",                                "ValidateTask"),
+    (r"\b(git (commit|push|stage|add|sync)|commit and push|push to (github|remote|origin)|deploy|publish|release)\b", "GitTask"),
+    (r"\b(search|look.?up|find docs?|fetch.*api)\b",                                     "SearchTask"),
+    (r"\b(migrat|upgrade|port|convert|deprecat)\b",                                      "MigrateTask"),
+    (r"\b(integrat|wire.?up|connect|bridge|hook.?up)\b",                                 "IntegrateTask"),
+    (r"\b(debug|trace|diagnose|root.?cause|why.*fail)\b",                                "DebugTask"),
+    (r"\b(refactor|optimize|clean|restructure|rename|simplify|improve)\b",               "RefactorTask"),
+    (r"\b(design|architect|plan|model|blueprint|schema|structure)\b",                    "DesignTask"),
+    (r"\b(explain|describe|what is|how does|why|clarify|overview|summarize|show me)\b",  "ExplainTask"),
+    (r"\b(analy[sz]e|audit|check|scan|investigate|find|detect|report)\b",                "AnalysisTask"),
+    # Broad verbs last — only fire if nothing more specific matched
+    (r"\b(implement|create|build|write|add|generate|make|develop|code)\b",               "ImplementTask"),
+]
 
 # ──────────────────────────────────────────────────────────
 # Micro-model training corpus (TF-IDF + LogisticRegression)
@@ -236,12 +276,20 @@ class TaskClassifier:
         self._module_index = self._build_module_index()
 
     def classify(self, request: str) -> ClassificationResult:
-        result = self._mode1(request)
+        # Mode 0: SPARQL — entity type hierarchy from reasoned graph
+        result = self._mode0_sparql(request)
 
-        if result.confidence < _CONFIDENCE_THRESHOLD and self.use_llm_fallback:
+        # Mode 1: keyword scoring (fallback when SPARQL has no matches)
+        if result is None or result.confidence < _CONFIDENCE_THRESHOLD:
+            keyword_result = self._mode1(request)
+            if result is None or keyword_result.confidence > result.confidence:
+                result = keyword_result
+
+        # Mode 2: TF-IDF micro-model (fallback when both above are weak)
+        if result.confidence < _CONFIDENCE_THRESHOLD:
             result = self._mode2(request, result)
 
-        result.matched_entities = self._match_entities(request)
+        result.matched_entities = result.matched_entities or self._match_entities(request)
         self._emit_event(result)
         return result
 
@@ -268,6 +316,97 @@ class TaskClassifier:
         from rdflib import XSD
         self.store.add(ev, OE.classifiedAt,
                        Literal(now, datatype=XSD.dateTime),                   PIPE)
+
+    # ──────────────────────────────────────────────
+    # Mode 0: SPARQL + ontology reasoning
+    # ──────────────────────────────────────────────
+
+    def _mode0_sparql(self, request: str) -> Optional["ClassificationResult"]:
+        """Classify by matching request tokens to graph entities, then using their
+        ontology type hierarchy (after owlrl reasoning) to determine TaskType.
+
+        Returns None if no entities are found in the graph.
+        """
+        matched_uris = self._match_entities(request)
+        if not matched_uris:
+            return None
+
+        # Build FILTER clause — SPARQL IN() requires comma-separated values
+        uri_list = ", ".join(f"<{u}>" for u in matched_uris[:20])
+
+        # Step 1: direct rdf:type for each matched entity
+        type_sparql = (
+            "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
+            "SELECT DISTINCT ?entity ?entityType WHERE {\n"
+            "  ?entity rdf:type ?entityType .\n"
+            f"  FILTER(?entity IN ({uri_list}))\n"
+            "}"
+        )
+        direct_types: set[str] = set()
+        type_uris: set[str] = set()
+        for row in self.store.query(type_sparql):
+            local = str(row.entityType).split("/")[-1].split("#")[-1]
+            direct_types.add(local)
+            type_uris.add(str(row.entityType))
+
+        # Step 2: superclasses via owlrl-materialized rdfs:subClassOf triples.
+        # After reason(), transitive closure is already in the graph as direct triples
+        # — no property path syntax needed.
+        entity_types: set[str] = set(direct_types)
+        if type_uris:
+            type_uri_list = ", ".join(f"<{u}>" for u in type_uris)
+            super_sparql = (
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                "SELECT DISTINCT ?sub ?super WHERE {\n"
+                "  ?sub rdfs:subClassOf ?super .\n"
+                f"  FILTER(?sub IN ({type_uri_list}))\n"
+                "}"
+            )
+            for row in self.store.query(super_sparql):
+                entity_types.add(str(row.super).split("/")[-1].split("#")[-1])
+
+        # Score task types based on entity type coverage
+        type_scores: dict[str, float] = {t: 0.0 for t in _TASK_TYPES}
+        for etype in entity_types:
+            preferred = _ENTITY_TYPE_TASKS.get(etype, [])
+            for rank, task_type in enumerate(preferred):
+                # First preferred gets full weight, each subsequent gets less
+                type_scores[task_type] += 1.0 / (rank + 1)
+
+        # Verb detection on the request text
+        verb_task: Optional[str] = None
+        for pattern, task_type in _VERB_TASK:
+            if re.search(pattern, request, re.IGNORECASE):
+                verb_task = task_type
+                break
+
+        # Boost: when verb task aligns with top entity-type task → high confidence
+        best_type = max(type_scores, key=lambda t: type_scores[t])
+        best_score = type_scores[best_type]
+
+        if verb_task and verb_task == best_type:
+            # Perfect alignment: entity type + verb agree
+            confidence = min(0.95, 0.70 + best_score * 0.1)
+            mode = "sparql+verb"
+        elif verb_task and best_score > 0:
+            # Verb overrides type when it's more specific
+            best_type = verb_task
+            confidence = 0.65
+            mode = "sparql+verb_override"
+        elif best_score > 0:
+            confidence = min(0.70, 0.40 + best_score * 0.15)
+            mode = "sparql_type"
+        else:
+            return None
+
+        return ClassificationResult(
+            task_type=best_type,
+            confidence=round(confidence, 3),
+            matched_entities=matched_uris,
+            mode_used=mode,
+            raw_request=request,
+            scores={t: round(s, 3) for t, s in type_scores.items()},
+        )
 
     # ──────────────────────────────────────────────
     # Mode 1: keyword scoring

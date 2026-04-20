@@ -65,6 +65,26 @@ class TripleRecord:
     is_databook: bool
 
 
+_CODE_PREDICATES = {
+    str(OE.functionName), str(OE.className), str(OE.definedIn), str(OE.absolutePath),
+    str(OE.description), str(OE.exports), str(OE.dependsOn), str(BUILD.dependsOn),
+    str(BUILD.requiredBy), str(CGA.partOf), str(OE.lineNumber),
+}
+
+_ONTOLOGY_PREDICATES = {
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+    "http://www.w3.org/2000/01/rdf-schema#label",
+    "http://www.w3.org/2000/01/rdf-schema#comment",
+    "http://www.w3.org/2002/07/owl#equivalentClass",
+}
+
+_PLAN_PREDICATES = {
+    str(OE.hasExecutor), str(OE.executionOrder), str(OE.hasStatus),
+    str(OE.taskName), str(OE.subtaskIndex), str(OE.planRequest),
+    str(OE.planType), str(OE.stepDesc),
+}
+
+
 @dataclass
 class ContextPacket:
     packet_id: str
@@ -77,6 +97,10 @@ class ContextPacket:
     depth_used: int                      = 0
     included: dict[str, str]            = field(default_factory=dict)
     excluded: dict[str, str]            = field(default_factory=dict)
+    # Task context — populated by pipeline before LLM dispatch
+    task_request: Optional[str]          = None
+    task_type: Optional[str]             = None
+    plan_steps: list[dict]               = field(default_factory=list)
 
     @property
     def semantic_records(self) -> list[TripleRecord]:
@@ -100,72 +124,169 @@ class ContextPacket:
                                    for r in self.semantic_records],
             "included":           self.included,
             "excluded":           self.excluded,
+            "task_request":       self.task_request,
+            "task_type":          self.task_type,
+            "plan_steps":         self.plan_steps,
         }
 
     def to_prompt_text(self) -> str:
-        """Format context packet as structured text for LLM consumption."""
+        """4-section structured prompt: project_facts / domain_knowledge / task_spec / agent_instructions."""
         anchor_name = self.anchor_uri.split("/")[-1].replace("-", "_")
-        lines = [
-            f"# Context — {self.anchor_type}: {anchor_name}",
-            f"_anchor: {self.anchor_uri}_",
-            f"_depth: {self.depth_used} | triples: {self.triple_count} | "
-            f"tokens≈{self.token_estimate}_",
-            "",
-        ]
+        header = (
+            f"# Context packet  [{self.anchor_type}: {anchor_name}]\n"
+            f"_anchor: {self.anchor_uri} | depth: {self.depth_used} | "
+            f"triples: {self.triple_count} | tokens≈{self.token_estimate}_"
+        )
+        sections = [header]
 
-        # Entity summaries
+        # ── 1. project_facts ──────────────────────────────────────────
+        pf = self._section_project_facts()
+        if pf:
+            sections.append("## project_facts\n" + pf)
+
+        # ── 2. domain_knowledge ───────────────────────────────────────
+        dk = self._section_domain_knowledge()
+        if dk:
+            sections.append("## domain_knowledge\n" + dk)
+
+        # ── 3. task_spec ──────────────────────────────────────────────
+        ts = self._section_task_spec()
+        if ts:
+            sections.append("## task_spec\n" + ts)
+
+        # ── 4. agent_instructions ─────────────────────────────────────
+        ai = self._section_agent_instructions()
+        if ai:
+            sections.append("## agent_instructions\n" + ai)
+
+        return "\n\n".join(sections)
+
+    # ── Section renderers ─────────────────────────────────────────────
+
+    def _section_project_facts(self) -> str:
+        lines = []
+
+        # Entity summaries (types + names)
         if self.entity_summaries:
-            lines += ["## Entities", ""]
-            for ent_uri, summary in self.entity_summaries.items():
+            lines.append("### entities")
+            for ent_uri, summary in list(self.entity_summaries.items())[:30]:
                 local = ent_uri.split("/")[-1].replace("-", "_")
-                lines.append(f"- **{local}**: {summary}")
-            lines.append("")
+                lines.append(f"  {local}: {summary}")
 
-        # Dependencies
-        dep_triples = [r for r in self.semantic_records
-                       if r.p in (str(OE.dependsOn), str(BUILD.requiredBy),
-                                  str(BUILD.dependsOn))]
-        if dep_triples:
-            lines += ["## Dependencies", ""]
-            for r in dep_triples:
+        # Code dependencies
+        dep_preds = {str(OE.dependsOn), str(BUILD.requiredBy), str(BUILD.dependsOn)}
+        deps = [r for r in self.semantic_records if r.p in dep_preds]
+        if deps:
+            lines.append("### dependencies")
+            for r in deps:
                 s = r.s.split("/")[-1].replace("-", "_")
                 o = r.o.split("/")[-1].replace("-", "_")
                 p = r.p.split("#")[-1].split("/")[-1]
-                lines.append(f"- {s} →[{p}]→ {o}")
-            lines.append("")
+                lines.append(f"  {s} →[{p}]→ {o}")
 
-        # Databook fragments
-        if self.databook_fragments:
-            lines += ["## Documentation", ""]
-            for frag in self.databook_fragments:
-                lines.append(f"### {frag.get('title', '(untitled)')}")
-                if frag.get("content_excerpt"):
-                    lines.append(frag["content_excerpt"])
-                lines.append("")
+        # Public API (exports)
+        exports = [r for r in self.semantic_records if r.p == str(OE.exports)]
+        if exports:
+            lines.append("### public_api")
+            for r in exports[:30]:
+                sym = r.o.split("/")[-1].replace("-", "_")
+                lines.append(f"  {sym}")
 
-        # Other semantic facts
-        shown = {str(OE.dependsOn), str(BUILD.requiredBy), str(BUILD.dependsOn)}
-        other = [r for r in self.semantic_records
-                 if r.p not in shown and r.p not in _DATABOOK_PROPS
-                 and r.p != str(RDF.type)]
-        if other:
-            lines += ["## Facts", ""]
-            for r in other[:40]:  # cap display
+        # Other code facts (functions, classes, descriptions)
+        code_shown = dep_preds | {str(OE.exports)}
+        code_facts = [
+            r for r in self.semantic_records
+            if r.p in _CODE_PREDICATES and r.p not in code_shown
+            and r.p not in _DATABOOK_PROPS and r.p != str(RDF.type)
+        ]
+        if code_facts:
+            lines.append("### code_facts")
+            for r in code_facts[:40]:
                 s = r.s.split("/")[-1].replace("-", "_")
                 p = r.p.split("#")[-1].split("/")[-1]
-                o = r.o.split("/")[-1] if r.o.startswith("http") else r.o[:100]
-                lines.append(f"- {s} · {p} · {o}  (depth {r.depth})")
-            lines.append("")
+                o = r.o.split("/")[-1] if r.o.startswith("http") else r.o[:120]
+                lines.append(f"  {s} · {p} · {o}")
 
-        # Include/Exclude explanation
-        lines += ["## Context Provenance", ""]
-        for ent_uri, reason in list(self.included.items())[:10]:
-            local = ent_uri.split("/")[-1]
-            lines.append(f"  ✓ {local}: {reason}")
-        for ent_uri, reason in list(self.excluded.items())[:5]:
-            local = ent_uri.split("/")[-1]
-            lines.append(f"  ✗ {local}: {reason}")
+        return "\n".join(lines)
 
+    def _section_domain_knowledge(self) -> str:
+        lines = []
+
+        # Databook fragments (design decisions, ADRs)
+        if self.databook_fragments:
+            lines.append("### databooks")
+            for frag in self.databook_fragments:
+                lines.append(f"#### {frag.get('title', '(untitled)')}")
+                if frag.get("content_excerpt"):
+                    lines.append(frag["content_excerpt"])
+
+        # Ontology class hierarchy
+        hier = [r for r in self.semantic_records if r.p in _ONTOLOGY_PREDICATES]
+        if hier:
+            lines.append("### class_hierarchy")
+            for r in hier[:20]:
+                s = r.s.split("/")[-1].split("#")[-1]
+                p = r.p.split("#")[-1].split("/")[-1]
+                o = r.o.split("/")[-1].split("#")[-1]
+                lines.append(f"  {s} {p} {o}")
+
+        # rdf:type declarations (what things ARE in the ontology)
+        type_facts = [r for r in self.semantic_records if r.p == str(RDF.type)
+                      and ("ontologist.ai" in r.o or "w3.org" in r.o)]
+        if type_facts:
+            lines.append("### ontology_types")
+            for r in type_facts[:20]:
+                s = r.s.split("/")[-1].replace("-", "_")
+                o = r.o.split("/")[-1].split("#")[-1]
+                lines.append(f"  {s} rdf:type {o}")
+
+        return "\n".join(lines)
+
+    def _section_task_spec(self) -> str:
+        lines = []
+        if self.task_type:
+            lines.append(f"task_type: {self.task_type}")
+        if self.task_request:
+            lines.append(f"request: {self.task_request}")
+        if self.entity_summaries:
+            lines.append("matched_entities:")
+            anchor = self.anchor_uri
+            lines.append(f"  anchor: {anchor.split('/')[-1]} ({self.anchor_type})")
+            for uri_str, summary in list(self.entity_summaries.items())[:10]:
+                if uri_str != anchor:
+                    lines.append(f"  - {uri_str.split('/')[-1]}: {summary}")
+        # Context provenance
+        included_count = len(self.included)
+        excluded_count = len(self.excluded)
+        lines.append(f"context_scope: {included_count} entities included, {excluded_count} excluded")
+        return "\n".join(lines)
+
+    def _section_agent_instructions(self) -> str:
+        lines = []
+        if self.plan_steps:
+            lines.append("execution_plan:")
+            for step in self.plan_steps:
+                order = step.get("order", "?")
+                name  = step.get("name", "?")
+                exec_ = step.get("executor", "?")
+                desc  = step.get("description", "")
+                lines.append(f"  step {order}: [{exec_}] {name}")
+                if desc:
+                    lines.append(f"    → {desc}")
+        else:
+            # Derive from graph records when no explicit plan passed
+            exec_facts = [r for r in self.semantic_records if r.p in _PLAN_PREDICATES]
+            if exec_facts:
+                lines.append("plan_facts:")
+                for r in exec_facts[:20]:
+                    s = r.s.split("/")[-1].replace("-", "_")
+                    p = r.p.split("/")[-1].split("#")[-1]
+                    o = r.o if not r.o.startswith("http") else r.o.split("/")[-1]
+                    lines.append(f"  {s} · {p} · {o}")
+        lines.append("constraints:")
+        lines.append("  - All code changes must be written to files before calling git_client")
+        lines.append("  - SHACL validation must pass before commit")
+        lines.append("  - LLM must not orchestrate — it only executes atomic steps")
         return "\n".join(lines)
 
 

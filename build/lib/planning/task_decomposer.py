@@ -233,16 +233,36 @@ class SubtaskTree:
     nodes: list[SubtaskNode] = field(default_factory=list)   # topological order
 
 
+_PATTERNS_GRAPH = URIRef("urn:oe:task-patterns")
+_PATTERNS_TTL   = "core/ontology/task_patterns.ttl"
+
+
 class TaskDecomposer:
-    """Rule-based task decomposition — no LLM involvement."""
+    """Ontology-driven task decomposition — patterns read from task_patterns.ttl via SPARQL."""
 
     def __init__(self, store: GraphStore):
         self.store = store
+        self._ensure_patterns_loaded()
+
+    def _ensure_patterns_loaded(self) -> None:
+        """Load task_patterns.ttl into the dedicated named graph (idempotent)."""
+        from pathlib import Path
+        # Already loaded if any triple exists in the patterns graph
+        ctx = self.store._g.get_context(_PATTERNS_GRAPH)
+        if len(ctx) > 0:
+            return
+        path = Path(_PATTERNS_TTL)
+        if path.exists():
+            self.store.load_turtle(str(path), graph=_PATTERNS_GRAPH)
 
     def decompose(self, result: ClassificationResult) -> SubtaskTree:
-        pattern = _PATTERNS.get(result.task_type, _PATTERNS["AnalysisTask"])
-        plan_id = f"plan-{uuid.uuid4().hex[:8]}"
+        steps = self._query_steps(result.task_type)
 
+        # Fallback: if no steps in ontology, use AnalysisTask steps
+        if not steps:
+            steps = self._query_steps("AnalysisTask")
+
+        plan_id = f"plan-{uuid.uuid4().hex[:8]}"
         tree = SubtaskTree(
             plan_id=plan_id,
             original_type=result.task_type,
@@ -250,10 +270,10 @@ class TaskDecomposer:
             matched_entities=result.matched_entities,
         )
 
-        for i, (task_type, name, desc, executor, deps) in enumerate(pattern):
+        for i, (step_type, name, desc, executor, deps) in enumerate(steps):
             node = SubtaskNode(
                 index=i,
-                task_type=task_type,
+                task_type=step_type,
                 name=name,
                 description=desc,
                 executor=executor,
@@ -264,6 +284,41 @@ class TaskDecomposer:
         self._write_to_graph(tree)
         self._emit_event(tree)
         return tree
+
+    def _query_steps(self, task_type: str) -> list[tuple]:
+        """SPARQL: load decomposition steps for a task type from the patterns graph."""
+        task_uri = f"https://ontologist.ai/ns/oe/{task_type}"
+        sparql = (
+            "PREFIX oe: <https://ontologist.ai/ns/oe/>\n"
+            "SELECT ?idx ?stype ?name ?desc ?exec ?deps WHERE {\n"
+            f"  GRAPH <{_PATTERNS_GRAPH}> {{\n"
+            f"    <{task_uri}> oe:decompositionStep ?step .\n"
+            "    ?step oe:stepIndex ?idx ;\n"
+            "          oe:stepType  ?stype ;\n"
+            "          oe:stepName  ?name ;\n"
+            "          oe:stepDesc  ?desc ;\n"
+            "          oe:executor  ?exec ;\n"
+            "          oe:dependsOn ?deps .\n"
+            "  }\n"
+            "} ORDER BY ?idx"
+        )
+        rows = list(self.store.query(sparql))
+        if not rows:
+            return []
+
+        # Parse dependsOn: stored as space-separated index strings ("0 1" or "")
+        steps = []
+        for row in rows:
+            deps_str = str(row.deps).strip()
+            deps = [int(x) for x in deps_str.split() if x.isdigit()]
+            steps.append((
+                str(row.stype),
+                str(row.name),
+                str(row.desc),
+                str(row.exec),
+                deps,
+            ))
+        return steps
 
     def _write_to_graph(self, tree: SubtaskTree) -> None:
         plan_uri = make_uri("plan", tree.plan_id)

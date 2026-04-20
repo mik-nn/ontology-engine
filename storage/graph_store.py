@@ -11,6 +11,12 @@ BUILD = Namespace("https://ontologist.ai/ns/build#")
 DB   = Namespace("https://ontologist.ai/ns/databook#")
 PROV = Namespace("http://www.w3.org/ns/prov#")
 
+# Ontology files loaded into the reasoner base
+_ONTOLOGY_FILES = [
+    "core/ontology/core.ttl",
+    "core/ontology/dependencies.ttl",
+]
+
 
 class GraphStore:
     """ConjunctiveGraph wrapper that models the Holon four-graph architecture.
@@ -97,6 +103,121 @@ class GraphStore:
         ctx = self._g.get_context(graph) if graph else self._g
         for triple in g:
             ctx.add(triple)
+
+    # ──────────────────────────────────────────────
+    # Reasoning
+    # ──────────────────────────────────────────────
+
+    def reason(self, regime: str = "RDFS") -> int:
+        """Apply forward-chaining inference and materialise inferred triples.
+
+        Regimes (owlrl):
+          "RDFS"     — rdfs:subClassOf transitivity, rdfs:domain/range, rdfs:subPropertyOf
+          "OWL_RL"   — RDFS + owl:inverseOf, owl:TransitiveProperty, property chains
+          "RDFS_OWL" — full OWL-RL closure
+
+        Returns the number of newly inferred triples added.
+
+        Inferred triples land in a dedicated named graph
+        <urn:oe:inferred> so they can be distinguished from asserted facts.
+        """
+        import owlrl
+
+        # Flatten the ConjunctiveGraph into a single Graph for owlrl
+        flat = Graph()
+        for ctx in self._g.contexts():
+            for triple in ctx:
+                flat.add(triple)
+
+        # Load ontology TBox so the reasoner knows the class/property hierarchy
+        for path in _ONTOLOGY_FILES:
+            p = Path(path)
+            if p.exists():
+                flat.parse(str(p), format="turtle")
+
+        before = len(flat)
+
+        closure_cls = {
+            "RDFS":     owlrl.RDFSClosure.RDFS_Semantics,
+            "OWL_RL":   owlrl.OWLRL_Semantics,
+            "RDFS_OWL": owlrl.RDFS_OWLRL_Semantics,
+        }.get(regime, owlrl.RDFSClosure.RDFS_Semantics)
+
+        owlrl.DeductiveClosure(closure_cls).expand(flat)
+
+        after = len(flat)
+        new_triples = after - before
+
+        # Write inferred triples into a dedicated named graph
+        inferred_graph = URIRef("urn:oe:inferred")
+        ctx = self._g.get_context(inferred_graph)
+        existing = set(self._g)
+        for triple in flat:
+            if triple not in existing:
+                ctx.add(triple)
+
+        return new_triples
+
+    def is_inferred(self, s: Node, p: Node, o: Node) -> bool:
+        """Return True if this triple exists only in the inferred graph (not asserted)."""
+        inferred_graph = URIRef("urn:oe:inferred")
+        return (s, p, o) in self._g.get_context(inferred_graph)
+
+    def module_for_file(self, abs_path: str) -> Optional[URIRef]:
+        """Return the oe:CodeModule URI for an absolute file path, or None.
+
+        Relies on oe:absolutePath written by CodeParser._parse_file().
+        Enables bidirectional code ↔ holon mapping:
+          code file → holon:  module_for_file(path)
+          holon → code file:  store.value(module_uri, OE.absolutePath)
+        """
+        sparql = (
+            "PREFIX oe: <https://ontologist.ai/ns/oe/>\n"
+            "SELECT ?m WHERE {\n"
+            f'  ?m oe:absolutePath "{abs_path}" .\n'
+            "} LIMIT 1"
+        )
+        for row in self._g.query(sparql):
+            return row.m
+        return None
+
+    def public_api(self, module_uri: URIRef) -> list[tuple[str, str]]:
+        """Return [(name, type)] of public exports from the module's projection graph.
+
+        type is either 'function' or 'class'.
+        """
+        proj = URIRef(str(module_uri) + "/projection")
+        sparql = (
+            "PREFIX oe: <https://ontologist.ai/ns/oe/>\n"
+            "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
+            f"SELECT ?name ?kind WHERE {{\n"
+            f"  GRAPH <{proj}> {{\n"
+            "    ?m oe:exports ?sym .\n"
+            "    OPTIONAL { ?sym oe:functionName ?fname }\n"
+            "    OPTIONAL { ?sym oe:className    ?cname }\n"
+            "    BIND(COALESCE(?fname, ?cname) AS ?name)\n"
+            "    ?sym rdf:type ?kind .\n"
+            "  }\n"
+            "}"
+        )
+        results = []
+        for row in self._g.query(sparql):
+            kind_local = str(row.kind).split("/")[-1].split("#")[-1]
+            results.append((str(row.name), kind_local))
+        return results
+
+    def subclasses_of(self, class_uri: URIRef) -> list[URIRef]:
+        """SPARQL query for all subclasses (direct + transitive via inferred graph).
+
+        Requires reason() to have been called first for transitive closure.
+        """
+        sparql = f"""
+            SELECT DISTINCT ?sub WHERE {{
+                ?sub <{RDF.type}> <{OWL.Class}> .
+                ?sub <{URIRef('http://www.w3.org/2000/01/rdf-schema#subClassOf')}> <{class_uri}> .
+            }}
+        """
+        return [row.sub for row in self._g.query(sparql)]
 
     # ──────────────────────────────────────────────
     # Validation

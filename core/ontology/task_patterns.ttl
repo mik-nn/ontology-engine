@@ -1,0 +1,342 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix oe:   <https://ontologist.ai/ns/oe/> .
+
+# ──────────────────────────────────────────────────────────────────
+# Task Decomposition Patterns
+#
+# Each TaskType carries oe:decompositionStep nodes, ordered by
+# oe:stepIndex, describing what to do and which executor to use.
+# TaskDecomposer reads this file instead of the hardcoded _PATTERNS dict.
+# ──────────────────────────────────────────────────────────────────
+
+# ── ExplainTask ────────────────────────────────────────────────────
+oe:ExplainTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "gather-context" ;
+        oe:stepDesc    "Collect relevant facts, code, and Databook fragments via ContextBuilder." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "ExplainTask" ;
+        oe:stepName    "generate-explanation" ;
+        oe:stepDesc    "Use LLM to synthesize a human-readable explanation from the context packet." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] .
+
+# ── AnalysisTask ───────────────────────────────────────────────────
+oe:AnalysisTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "introspect-scope" ;
+        oe:stepDesc    "Run ProjectScanner and CodeParser to establish the current state of the scope." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "validate-graph" ;
+        oe:stepDesc    "Run SHACL + RuleEngine to detect any existing violations." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "produce-report" ;
+        oe:stepDesc    "Use LLM to generate a structured analysis report from the context packet." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0 1"
+    ] .
+
+# ── DesignTask ─────────────────────────────────────────────────────
+oe:DesignTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "gather-requirements" ;
+        oe:stepDesc    "Extract requirements from Databooks and user-provided context." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "DesignTask" ;
+        oe:stepName    "draft-structure" ;
+        oe:stepDesc    "Use LLM to propose module/class/interface structure aligned with the ontology." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "validate-design" ;
+        oe:stepDesc    "Map the draft structure to ontology classes and run SHACL validation." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   "1"
+    ] .
+
+# ── ImplementTask ──────────────────────────────────────────────────
+oe:ImplementTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "understand-scope" ;
+        oe:stepDesc    "Build context packet for target module; identify dependsOn chain." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "DesignTask" ;
+        oe:stepName    "draft-interface" ;
+        oe:stepDesc    "Use LLM to propose class/function signatures and docstrings." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "ImplementTask" ;
+        oe:stepName    "write-code" ;
+        oe:stepDesc    "Use LLM to generate implementation conforming to the drafted interface." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "1"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "3"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "verify-implementation" ;
+        oe:stepDesc    "Run SHACL + RuleEngine on updated graph; check imports and structure." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   "2"
+    ] .
+
+# ── RefactorTask ───────────────────────────────────────────────────
+oe:RefactorTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "analyse-current" ;
+        oe:stepDesc    "Build context packet; identify code smells, SHACL violations, coupling." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "RefactorTask" ;
+        oe:stepName    "apply-refactor" ;
+        oe:stepDesc    "Use LLM to rewrite the target code according to refactoring goal." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "verify-refactor" ;
+        oe:stepDesc    "Run SHACL + imports check; confirm no regressions introduced." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   "1"
+    ] .
+
+# ── DocumentTask ───────────────────────────────────────────────────
+oe:DocumentTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "gather-facts" ;
+        oe:stepDesc    "Build context packet including existing Databooks and code structure." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "DocumentTask" ;
+        oe:stepName    "write-documentation" ;
+        oe:stepDesc    "Use LLM to generate documentation from context packet." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] .
+
+# ── GitTask ────────────────────────────────────────────────────────
+oe:GitTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "GitTask" ;
+        oe:stepName    "git-operation" ;
+        oe:stepDesc    "Execute git operation (commit/push/stage) via GitClient." ;
+        oe:executor    "git_client" ;
+        oe:dependsOn   ""
+    ] .
+
+# ── DebugTask ──────────────────────────────────────────────────────
+oe:DebugTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "gather-error-context" ;
+        oe:stepDesc    "Collect stack trace, SHACL violations, and recent events from graph." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "DebugTask" ;
+        oe:stepName    "diagnose" ;
+        oe:stepDesc    "Use LLM to reason about root cause from the collected context." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "ImplementTask" ;
+        oe:stepName    "apply-fix" ;
+        oe:stepDesc    "Use LLM to implement the diagnosed fix." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "1"
+    ] .
+
+# ── SearchTask ─────────────────────────────────────────────────────
+oe:SearchTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "SearchTask" ;
+        oe:stepName    "web-search" ;
+        oe:stepDesc    "Run external search (Tavily / web) for the requested information." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   ""
+    ] .
+
+# ── MigrateTask ────────────────────────────────────────────────────
+oe:MigrateTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "assess-migration-scope" ;
+        oe:stepDesc    "Map current API usage patterns; identify breaking changes." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "MigrateTask" ;
+        oe:stepName    "apply-migration" ;
+        oe:stepDesc    "Use LLM to rewrite callsites according to new API." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "verify-migration" ;
+        oe:stepDesc    "Run SHACL + type checks; confirm no old API references remain." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   "1"
+    ] .
+
+# ── ReviewTask ─────────────────────────────────────────────────────
+oe:ReviewTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "collect-review-context" ;
+        oe:stepDesc    "Build context packet for the code under review." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "ReviewTask" ;
+        oe:stepName    "generate-review" ;
+        oe:stepDesc    "Use LLM to produce a structured code review report." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] .
+
+# ── IntegrateTask ──────────────────────────────────────────────────
+oe:IntegrateTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "analyse-integration-points" ;
+        oe:stepDesc    "Identify interface contracts, type boundaries, dependency edges." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "1"^^xsd:integer ;
+        oe:stepType    "IntegrateTask" ;
+        oe:stepName    "write-glue-code" ;
+        oe:stepDesc    "Use LLM to generate adapter/bridge code." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   "0"
+    ] ;
+    oe:decompositionStep [
+        oe:stepIndex   "2"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "verify-integration" ;
+        oe:stepDesc    "Run SHACL + import graph check; verify no circular dependencies." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   "1"
+    ] .
+
+# ── ValidateTask ───────────────────────────────────────────────────
+oe:ValidateTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "ValidateTask" ;
+        oe:stepName    "run-validation" ;
+        oe:stepDesc    "Execute SHACL shapes, rule engine, and/or test suite." ;
+        oe:executor    "reasoning" ;
+        oe:dependsOn   ""
+    ] .
+
+# ── ComplexTask ────────────────────────────────────────────────────
+oe:ComplexTask
+    oe:decompositionStep [
+        oe:stepIndex   "0"^^xsd:integer ;
+        oe:stepType    "AnalysisTask" ;
+        oe:stepName    "decompose-complex" ;
+        oe:stepDesc    "Use LLM to break the complex request into typed subtasks." ;
+        oe:executor    "llm" ;
+        oe:dependsOn   ""
+    ] .
+
+# ──────────────────────────────────────────────────────────────────
+# Executor assignment
+# Canonical mapping: TaskType → default executor.
+# TaskPlanner reads this via SPARQL instead of _EXECUTOR_MAP dict.
+# ──────────────────────────────────────────────────────────────────
+
+oe:ExplainTask    oe:defaultExecutor "llm" .
+oe:DesignTask     oe:defaultExecutor "llm" .
+oe:ImplementTask  oe:defaultExecutor "llm" .
+oe:RefactorTask   oe:defaultExecutor "llm" .
+oe:DocumentTask   oe:defaultExecutor "llm" .
+oe:DebugTask      oe:defaultExecutor "llm" .
+oe:SearchTask     oe:defaultExecutor "llm" .
+oe:MigrateTask    oe:defaultExecutor "llm" .
+oe:ReviewTask     oe:defaultExecutor "llm" .
+oe:IntegrateTask  oe:defaultExecutor "llm" .
+oe:ComplexTask    oe:defaultExecutor "llm" .
+oe:AnalysisTask   oe:defaultExecutor "reasoning" .
+oe:ValidateTask   oe:defaultExecutor "reasoning" .
+oe:GitTask        oe:defaultExecutor "git_client" .
+
+# oe:defaultExecutor property declaration
+# Pattern schema properties — no rdfs:domain to avoid RDFS inference
+# promoting class URIs (oe:ExplainTask etc.) to instances of oe:TaskHolon.
+oe:defaultExecutor  a owl:DatatypeProperty ; rdfs:label "default executor for task type" .
+oe:decompositionStep a owl:ObjectProperty  ; rdfs:label "decomposition step" .
+oe:stepIndex  a owl:DatatypeProperty .
+oe:stepType   a owl:DatatypeProperty .
+oe:stepName   a owl:DatatypeProperty .
+oe:stepDesc   a owl:DatatypeProperty .
+oe:executor   a owl:DatatypeProperty .

@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 litellm = ["litellm>=1.40"]
+tavily = ["tavily-python>=0.4.0", "requests"]
 all-providers = ["litellm>=1.40"]
 
 [project.scripts]

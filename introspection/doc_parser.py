@@ -68,7 +68,11 @@ class DocParser:
             return "databook"
         else:
             # Minimal Databook from filename
-            self.store.add(module_uri, DB.title,  Literal(path.stem),   interior)
+            self.store.add(module_uri, DB.id, Literal(path.stem), interior)
+            self.store.add(module_uri, DB.version, Literal("0.1"), interior)
+            self.store.add(module_uri, DB.type, Literal("plain-doc"), interior)
+            self.store.add(module_uri, DB.created, Literal("2024-04-20"), interior)
+            self.store.add(module_uri, DB.title, Literal(path.stem), interior)
             self.store.add(module_uri, DB.content, Literal(content[:500]), interior)
             return "plain"
 

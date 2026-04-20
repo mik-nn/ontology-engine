@@ -47,12 +47,19 @@ class CodeParser:
         except (SyntaxError, UnicodeDecodeError):
             return {}
 
-        rel = path.relative_to(self.root)
+        rel        = path.relative_to(self.root)
         module_uri = uri("module", str(rel))
         interior   = graph_uri(module_uri, "interior")
+        projection = graph_uri(module_uri, "projection")
+        mod_ctx    = graph_uri(module_uri, "context")
 
         counts = {"functions": 0, "classes": 0, "imports": 0}
 
+        # ── Reverse mapping: absolute path → module URI (queryable via SPARQL)
+        self.store.add(module_uri, OE.absolutePath,
+                       Literal(str(path)), interior)
+
+        # ── Module docstring → description
         docstring = ast.get_docstring(tree)
         if docstring:
             self.store.add(module_uri, OE.description,
@@ -60,11 +67,11 @@ class CodeParser:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-                self._emit_function(node, module_uri, interior)
+                self._emit_function(node, module_uri, interior, projection)
                 counts["functions"] += 1
 
             elif isinstance(node, ast.ClassDef):
-                self._emit_class(node, module_uri, interior)
+                self._emit_class(node, module_uri, interior, projection)
                 counts["classes"] += 1
 
             elif isinstance(node, ast.Import):
@@ -80,26 +87,38 @@ class CodeParser:
         return counts
 
     def _emit_function(self, node: ast.FunctionDef, module_uri: URIRef,
-                       interior: URIRef) -> None:
-        # oe:CodeFunction — structural fact, NOT a pipeline TaskHolon
+                       interior: URIRef, projection: URIRef) -> None:
         fn_uri = uri("task", f"{module_uri}-{node.name}")
         self.store.add(fn_uri, RDF.type,         OE.CodeFunction,      interior)
         self.store.add(fn_uri, OE.functionName,  Literal(node.name),   interior)
         self.store.add(fn_uri, OE.definedIn,     module_uri,           interior)
         self.store.add(fn_uri, OE.lineNumber,    Literal(node.lineno), interior)
+        # Holon membership: function belongs to its module holon
+        self.store.add(fn_uri, CGA.partOf,       module_uri,           interior)
+
+        # Public API → projection graph (non-private, non-dunder)
+        if not node.name.startswith("_"):
+            self.store.add(module_uri, OE.exports,      fn_uri,               projection)
+            self.store.add(fn_uri,     RDF.type,         OE.CodeFunction,      projection)
+            self.store.add(fn_uri,     OE.functionName,  Literal(node.name),   projection)
 
     def _emit_class(self, node: ast.ClassDef, module_uri: URIRef,
-                    interior: URIRef) -> None:
-        # oe:CodeClass — structural fact, NOT a Holon
+                    interior: URIRef, projection: URIRef) -> None:
         cls_uri = uri("module", f"{module_uri}/{node.name}")
         self.store.add(cls_uri, RDF.type,       OE.CodeClass,         interior)
         self.store.add(cls_uri, OE.className,   Literal(node.name),   interior)
         self.store.add(cls_uri, OE.definedIn,   module_uri,           interior)
         self.store.add(cls_uri, OE.lineNumber,  Literal(node.lineno), interior)
+        # Holon membership
+        self.store.add(cls_uri, CGA.partOf,     module_uri,           interior)
+
+        # Public classes → projection graph
+        if not node.name.startswith("_"):
+            self.store.add(module_uri, OE.exports,   cls_uri,              projection)
+            self.store.add(cls_uri,    OE.className, Literal(node.name),   projection)
 
     def _emit_import(self, module_name: str, from_uri: URIRef,
                      interior: URIRef) -> None:
-        # External packages use build: namespace; local modules use oe:module/
         if module_name.startswith((".", "storage", "introspection", "enrichment",
                                    "interaction", "verification", "context",
                                    "planning", "pipeline", "api", "visualization")):

@@ -113,6 +113,18 @@ class PlanExecutor:
 
         # Build context
         raw    = self._builder.build(anchor)
+        # Populate 4-section fields from the plan spec
+        raw.task_request = spec.original_request
+        raw.task_type    = spec.original_type
+        raw.plan_steps   = [
+            {
+                "order":       i + 1,
+                "name":        n.name,
+                "executor":    n.executor,
+                "description": n.description,
+            }
+            for i, n in enumerate(spec.ordered_subtasks)
+        ]
         pruned = self._pruner.prune(raw)
 
         try:

@@ -291,6 +291,11 @@ class PipelineOrchestrator:
         if run.graph_path:
             self.store.load(run.graph_path)
 
+        # Materialise inferred triples (rdfs:subClassOf chains, owl:inverseOf, etc.)
+        # before any SPARQL-based reasoning in classifier/planner.
+        new_triples = self.store.reason("RDFS")
+        self._print(f"  Reasoner: +{new_triples} inferred triples")
+
         classifier = TaskClassifier(self.store)
         result = classifier.classify(run.request)
         self._print(f"  task_type={result.task_type}  confidence={result.confidence:.2f}")

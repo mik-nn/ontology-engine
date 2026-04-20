@@ -3,6 +3,7 @@ pyproject.toml
 ./cli/__init__.py
 ./cli/config.py
 ./cli/main.py
+./cli/repl.py
 ./cli/commands/__init__.py
 ./cli/commands/ai_todo.py
 ./cli/commands/init.py
@@ -29,6 +30,9 @@ pyproject.toml
 ./execution/tools/git_tools.py
 ./execution/tools/registry.py
 ./interaction/__init__.py
+./interaction/confirmation.py
+./interaction/intent_parser.py
+./interaction/intents.py
 ./interaction/interviewer.py
 ./interaction/user_feedback.py
 ./introspection/__init__.py
@@ -66,6 +70,7 @@ pyproject.toml
 cli/__init__.py
 cli/config.py
 cli/main.py
+cli/repl.py
 cli/commands/__init__.py
 cli/commands/ai_todo.py
 cli/commands/init.py
@@ -92,6 +97,9 @@ execution/tools/base.py
 execution/tools/git_tools.py
 execution/tools/registry.py
 interaction/__init__.py
+interaction/confirmation.py
+interaction/intent_parser.py
+interaction/intents.py
 interaction/interviewer.py
 interaction/user_feedback.py
 introspection/__init__.py

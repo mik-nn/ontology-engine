@@ -9,8 +9,9 @@ from cli.commands import run, verify, introspect, status, init, ai_todo, visuali
 app = typer.Typer(
     name="ont",
     help="Ontology-driven pipeline engine. SHACL validates, ontology orchestrates, LLM executes.",
-    no_args_is_help=True,
+    no_args_is_help=False,
     rich_markup_mode="rich",
+    invoke_without_command=True,
 )
 console = Console()
 
@@ -26,6 +27,7 @@ app.add_typer(tools.app,      name="tools")
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit.", is_eager=True),
 ) -> None:
     if version:
@@ -36,6 +38,11 @@ def main(
             v = "dev"
         console.print(f"ont [bold]{v}[/bold]")
         raise typer.Exit()
+
+    # No subcommand given → enter interactive REPL
+    if ctx is not None and ctx.invoked_subcommand is None:
+        from cli.repl import start
+        start()
 
 
 if __name__ == "__main__":

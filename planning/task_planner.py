@@ -80,10 +80,10 @@ class TaskPlanner:
     def __init__(self, store: GraphStore,
                  shapes: list[str] | None = None):
         self.store = store
-        self.shapes = shapes or [
-            "core/shacl/planning_shapes.ttl",
-            "core/shacl/holon_shapes.ttl",
-        ]
+        # Only validate plan/subtask structure — NOT events or full holon shapes.
+        # Events are validated separately by RuleEngine in the verify stage.
+        self.shapes = shapes or ["core/shacl/planning_shapes.ttl"]
+        self._executor_map = self._load_executor_map()
 
     def plan(self, tree: SubtaskTree) -> PlanSpec:
         ordered = self._topo_sort(tree.nodes)
@@ -135,17 +135,41 @@ class TaskPlanner:
         return result
 
     # ──────────────────────────────────────────────
-    # Executor assignment
+    # Executor assignment — from ontology, not dict
     # ──────────────────────────────────────────────
+
+    def _load_executor_map(self) -> dict[str, str]:
+        """SPARQL: read oe:defaultExecutor from patterns graph (or fall back to _EXECUTOR_MAP)."""
+        from pathlib import Path
+        patterns_graph = "urn:oe:task-patterns"
+        sparql = (
+            "PREFIX oe: <https://ontologist.ai/ns/oe/>\n"
+            "SELECT ?taskType ?exec WHERE {\n"
+            f"  GRAPH <{patterns_graph}> {{\n"
+            "    ?taskType oe:defaultExecutor ?exec .\n"
+            "  }\n"
+            "}"
+        )
+        result = {}
+        try:
+            for row in self.store.query(sparql):
+                local = str(row.taskType).split("/")[-1].split("#")[-1]
+                result[local] = str(row.exec)
+        except Exception:
+            pass
+        return result or dict(_EXECUTOR_MAP)  # fallback to hardcoded if patterns not loaded
 
     def _assign_executors(self, nodes: list[SubtaskNode],
                           tree: SubtaskTree) -> None:
         for node in nodes:
-            # Decomposer already set executor — override only if needed by rules
-            if node.name.endswith("commit-changes"):
-                node.executor = "git_client"
-            elif node.task_type in _EXECUTOR_MAP and node.executor not in ("git_client",):
-                node.executor = _EXECUTOR_MAP[node.task_type]
+            # Decomposer already set executor from pattern step — respect it.
+            # Override only if the ontology executor map says something different
+            # and the step didn't explicitly pin git_client.
+            if node.executor == "git_client":
+                continue
+            ontology_exec = self._executor_map.get(node.task_type)
+            if ontology_exec and ontology_exec != node.executor:
+                node.executor = ontology_exec
 
     # ──────────────────────────────────────────────
     # Write execution order back to graph
