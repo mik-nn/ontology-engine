@@ -313,16 +313,30 @@ class PlanExecutor:
     def _resolve_target_file(self, spec: "PlanSpec") -> str | None:
         """Return a file path from matched entities or by parsing the original request."""
         import re
+        from pathlib import Path
         # 1. matched entity → oe:filePath in graph
         for uri in spec.matched_entities:
             from rdflib import URIRef
             fp = self.store._g.value(URIRef(uri), OE.filePath)
             if fp:
                 return str(fp)
-        # 2. extract *.py path from the request text
-        m = re.search(r'[\w./\\-]+\.py\b', spec.original_request)
+        # 2. extract any file path with known extension from the request text
+        m = re.search(r'[\w./\\-]+\.\w+\b', spec.original_request)
         if m:
             return m.group(0)
+        # 3. keyword heuristics for common doc files
+        req_lower = spec.original_request.lower()
+        _KEYWORD_FILES = [
+            ("readme", "README.md"),
+            ("changelog", "CHANGELOG.md"),
+            ("contributing", "CONTRIBUTING.md"),
+            ("license", "LICENSE"),
+            ("todo", "TODO.md"),
+            ("agents", "AGENTS.md"),
+        ]
+        for keyword, filename in _KEYWORD_FILES:
+            if keyword in req_lower and Path(filename).exists():
+                return filename
         return None
 
     def _write_file(self, path: str, content: str) -> str:

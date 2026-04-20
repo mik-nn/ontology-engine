@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python3 -c ' *)",
       "Bash(python -c ' *)",
-      "Bash(python -m pytest tests/e2e/test_pipeline.py -q)"
+      "Bash(python -m pytest tests/e2e/test_pipeline.py -q)",
+      "Bash(python -c \"from interaction.interviewer import Interviewer; print\\('OK'\\)\")"
     ]
   }
 }

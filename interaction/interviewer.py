@@ -62,10 +62,17 @@ class Interviewer:
     def run(self) -> InterviewSession:
         session = InterviewSession()
         gaps = self._detect_gaps()
-        session.gaps_found = len(gaps)
+
+        # Auto-resolve G04 gaps from file content before asking the user
+        gaps, auto_closed = self._auto_resolve_g04(gaps)
+        session.gaps_found = len(gaps) + auto_closed
+        session.gaps_closed += auto_closed
 
         if not gaps:
-            print(f"\n{_GREEN}No gaps found — graph is complete.{_RESET}")
+            if auto_closed:
+                print(f"\n{_GREEN}All gaps auto-resolved from source ({auto_closed} module(s)).{_RESET}")
+            else:
+                print(f"\n{_GREEN}No gaps found — graph is complete.{_RESET}")
             return session
 
         print(f"\n{_BOLD}{'─'*60}{_RESET}")
@@ -198,6 +205,81 @@ class Interviewer:
             )
             for row in results
         ]
+
+    def _auto_resolve_g04(
+        self, gaps: list[GapDescriptor]
+    ) -> tuple[list[GapDescriptor], int]:
+        """Try to fill G04 gaps from file docstrings or path heuristics.
+
+        Returns (remaining_gaps, auto_closed_count).
+        """
+        import ast as _ast
+        from pathlib import Path
+
+        remaining: list[GapDescriptor] = []
+        closed = 0
+
+        for gap in gaps:
+            if gap.rule_id != "G04":
+                remaining.append(gap)
+                continue
+
+            desc = self._infer_description(gap.subject_uri)
+            if desc:
+                result = self._feedback.apply(gap, desc)
+                if result.accepted:
+                    closed += 1
+                    continue
+            remaining.append(gap)
+
+        return remaining, closed
+
+    def _infer_description(self, module_uri: str) -> str | None:
+        """Extract description from source file docstring or infer from module path."""
+        import ast as _ast
+        from pathlib import Path
+        from rdflib import URIRef
+
+        uri_ref = URIRef(module_uri)
+        fp_lit = self.store._g.value(uri_ref, OE.filePath)
+        if fp_lit is None:
+            return None
+
+        # filePath is relative to project root (cwd)
+        file_path = Path(str(fp_lit))
+        if not file_path.is_absolute():
+            file_path = Path.cwd() / file_path
+        if not file_path.exists():
+            return None
+
+        try:
+            source = file_path.read_text(encoding="utf-8")
+            tree = _ast.parse(source, filename=str(file_path))
+        except (SyntaxError, UnicodeDecodeError, OSError):
+            return None
+
+        # 1. Use existing module docstring
+        docstring = _ast.get_docstring(tree)
+        if docstring:
+            return docstring.strip()[:500]
+
+        # 2. Infer from functions/classes defined in the file
+        names = [
+            node.name
+            for node in _ast.walk(tree)
+            if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef, _ast.ClassDef))
+            and not node.name.startswith("_")
+        ]
+        if names:
+            parts = str(file_path).replace("\\", "/").split("/")
+            pkg = parts[-2] if len(parts) >= 2 else ""
+            symbols = ", ".join(names[:5])
+            return f"Package initializer for {pkg} — exports: {symbols}."
+
+        # 3. Fallback: derive from package path
+        parts = str(file_path).replace("\\", "/").split("/")
+        pkg = parts[-2] if len(parts) >= 2 else str(file_path.stem)
+        return f"Package namespace init for {pkg}."
 
     def _gap_g05_plan_no_type(self) -> list[GapDescriptor]:
         results = self.store._g.query("""

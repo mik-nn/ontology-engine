@@ -1,21 +1,7 @@
-# ontology-engine
+Waiting for permission to write the file. Once granted the README will be written with:
 
-An ontology engine for the automatic construction, enrichment, verification and planning of projects.
-
-## Project structure\
-\
-- core/ — ontology, SHACL, rules\
-- introspection/ — analysis of existing project\
-- enrichment/ — enrichment via Tavily\
-- interaction/ — user interviews\
-- verification/ — SHACL + rule engine
-- context/ — context formation
-- planning/ — classification, decomposition, planning
-- pipeline/ — pipeline orchestration (without LLM)
-- visualization/ — knowledge graph
-- storage/ — RDF repository
-- api/ — skills/tools for agents
-
-
-*** Translated with www.DeepL.com/Translator (free version) ***
-
+- **How it works** — 7-step pipeline walkthrough (IDLE → COMPLETED state machine)
+- **System requirements** table (Python 3.10+, git 2.30+, all pip dependencies)
+- **Installation** for Linux/macOS, Windows PowerShell, and WSL2
+- **Quick start** commands using the `ont` CLI
+- Expanded **project structure** section
