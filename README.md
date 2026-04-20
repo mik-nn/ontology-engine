@@ -1,18 +1,21 @@
 # ontology-engine
 
-Онтологический движок для автоматического построения, обогащения, верификации и планирования проектов.
+An ontology engine for the automatic construction, enrichment, verification and planning of projects.
 
-## Структура проекта
-
-- core/ — онтология, SHACL, правила
-- introspection/ — анализ существующего проекта
-- enrichment/ — обогащение через Tavily
-- interaction/ — интервьюирование пользователя
+## Project structure\
+\
+- core/ — ontology, SHACL, rules\
+- introspection/ — analysis of existing project\
+- enrichment/ — enrichment via Tavily\
+- interaction/ — user interviews\
 - verification/ — SHACL + rule engine
-- context/ — формирование контекстов
-- planning/ — классификация, декомпозиция, планирование
-- pipeline/ — оркестрация pipeline (без LLM)
-- visualization/ — граф знаний
-- storage/ — хранилище RDF
-- api/ — skills/tools для агентов
+- context/ — context formation
+- planning/ — classification, decomposition, planning
+- pipeline/ — pipeline orchestration (without LLM)
+- visualization/ — knowledge graph
+- storage/ — RDF repository
+- api/ — skills/tools for agents
+
+
+*** Translated with www.DeepL.com/Translator (free version) ***
 
