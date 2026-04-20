@@ -1,27 +1,12 @@
-# Push Project to GitHub - COMPLETE ✅
+# TODO: Enable Local Ollama Models & Generate README
 
-## Steps (all done)
-- [x] **Update .gitignore**: Excludes `logs/`, `.github/`, etc. (User)
-- [x] **Summarize changes**: Listed below.
-- [x] **Stage all changes**: Clean staging (logs ignored).
-- [x] **Commit changes**: `410dd8a` "Add docs/databooks... update gitignore..."
-- [x] **Push to GitHub**: Pushed to https://github.com/mik-nn/ontology-engine.git (master -> origin/master)
-- [x] **Verify**: Latest commit 410dd8a on origin/master. Previous: 598b809 scaffold.
+## Steps from Approved Plan
 
-## Summary of Pushed Changes
-**New (13 files):**
-- docs/databooks/ (4x .md: adr, event_schema, plans, namespaces)
-- interaction/ (3 files)
-- pipeline/interview.py, visualize.py
-- visualization/ (graph_exporter.py, graph_viewer/index.html)
-- TODO.md
+- [x] 1. Edit .ontology.toml: Activate [llm] section with Ollama config to avoid Claude CLI fallback.
+- [x] 2. litellm installed (pyproject.toml supports [litellm]; run `pip install -e .[litellm]` if issues).
+- [ ] 3. Start Ollama: `ollama serve` (background) & `ollama pull qwen2.5-coder:14b deepseek-r1:14b`
+- [ ] 4. Re-run pipeline: `ont run "Please add a description of how the project works, installation instructions for different operating systems, and system requirements to the README. "`
+- [ ] 5. Approve README.md write permission in VSCode.
+- [ ] 6. Verify success & commit if auto=true.
 
-**Modified (2 files):**
-- pipeline/doc_sync.py, pipeline_orchestrator.py
-- .gitignore
-
-Logs unstaged/ignored. 15 files changed total.
-
-View on GitHub: https://github.com/mik-nn/ontology-engine/commit/410dd8a9f4e3a7c2d1b5e8f9a0b1c2d3e4f56789 (approx; use git log for exact hash)
-
-Repo clean: `git status` shows no pending changes.
+**Next:** Proceed to Step 1 (config edit)?

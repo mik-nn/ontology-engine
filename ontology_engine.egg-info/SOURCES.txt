@@ -45,6 +45,7 @@ pyproject.toml
 ./pipeline/graph_updater.py
 ./pipeline/interview.py
 ./pipeline/introspect.py
+./pipeline/metrics.py
 ./pipeline/pipeline_orchestrator.py
 ./pipeline/plan.py
 ./pipeline/verify.py
@@ -54,6 +55,7 @@ pyproject.toml
 ./planning/task_classifier.py
 ./planning/task_decomposer.py
 ./planning/task_planner.py
+./planning/task_type_registry.py
 ./storage/__init__.py
 ./storage/graph_store.py
 ./storage/id_manager.py
@@ -112,6 +114,7 @@ pipeline/git_client.py
 pipeline/graph_updater.py
 pipeline/interview.py
 pipeline/introspect.py
+pipeline/metrics.py
 pipeline/pipeline_orchestrator.py
 pipeline/plan.py
 pipeline/verify.py
@@ -121,6 +124,7 @@ planning/plan_executor.py
 planning/task_classifier.py
 planning/task_decomposer.py
 planning/task_planner.py
+planning/task_type_registry.py
 storage/__init__.py
 storage/graph_store.py
 storage/id_manager.py

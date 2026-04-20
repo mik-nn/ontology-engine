@@ -41,6 +41,35 @@ _LITELLM_PROVIDERS = {
 }
 
 
+def create_for_role(full_config: dict[str, Any], role: str = "default") -> LLMAdapter:
+    """Create adapter for a specific role (write, reasoning, or default).
+
+    Reads full_config["llm"][role], merges with full_config["llm"] base values,
+    falls back to base when role config is absent or when fallback=true and
+    the provider is unavailable (e.g. Ollama not running).
+    """
+    base_cfg = full_config.get("llm", {})
+    role_cfg: dict = base_cfg.get(role, {})
+
+    if not role_cfg or not role_cfg.get("provider"):
+        return create(base_cfg)
+
+    # Merge: base scalars first, then role overrides (skip nested sub-tables)
+    merged = {k: v for k, v in base_cfg.items() if not isinstance(v, dict)}
+    merged.update(role_cfg)
+
+    if role_cfg.get("fallback", False):
+        try:
+            adapter = create(merged)
+            # Smoke-test: check the provider is importable/configured
+            _ = adapter.provider_name
+            return adapter
+        except Exception:
+            return create(base_cfg)
+
+    return create(merged)
+
+
 def create(config: dict[str, Any]) -> LLMAdapter:
     """Instantiate the right adapter from a provider config dict."""
     provider = config.get("provider", "claude-code").lower()

@@ -22,29 +22,29 @@ push   = false
 # Set fallback = true in a role section to auto-revert to [llm] if unavailable.
 
 [llm]
-provider         = "claude-code"
-model            = "claude-sonnet-4-6"
-verbose          = false          # print LLM output during execution
-thinking         = false          # extended thinking (anthropic provider only)
-thinking_budget  = 8000           # max thinking tokens (< max_tokens)
+provider         = "ollama"
+model            = "qwen2.5-coder:latest"
+base_url         = "http://localhost:11434"
+verbose          = true
+fallback         = false          # Avoid claude-code fallback
 
 # ── Write role: code generation (Qwen2.5-Coder via local Ollama) ──────────────
 # Best for 3080Ti 16GB: qwen2.5-coder:14b (~9GB Q4_K_M)
 # Requires: ollama pull qwen2.5-coder:14b
 [llm.write]
-# provider = "ollama"
-# model    = "qwen2.5-coder:14b"
-# base_url = "http://localhost:11434"
-# fallback = true   # use [llm] if Ollama is not running
+provider = "ollama"
+model    = "qwen2.5-coder:latest"
+base_url = "http://localhost:11434"
+fallback = true   # use [llm] if Ollama is not running
 
 # ── Reasoning role: planning & analysis (DeepSeek-R1 via local Ollama) ────────
 # Best for 3080Ti 16GB: deepseek-r1:14b (~9GB Q4_K_M)
 # Requires: ollama pull deepseek-r1:14b
 [llm.reasoning]
-# provider = "ollama"
-# model    = "deepseek-r1:14b"
-# base_url = "http://localhost:11434"
-# fallback = true   # use [llm] if Ollama is not running
+provider = "ollama"
+model    = "deepseek-r1:14b"
+base_url = "http://localhost:11434"
+fallback = true   # use [llm] if Ollama is not running
 
 # ── KIMI K2 via API (Moonshot AI) ─────────────────────────────────────────────
 # API-only, 1T MoE — large context (128K), good for analysis tasks
