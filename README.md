@@ -67,5 +67,3 @@ The project structure is organized as follows:
 - `graph_store.py`: Contains the core classes and functions for graph storage.
 - `utils.py`: Utility functions for handling data and operations.
 - `cli.py`: Command-line interface for interacting with the ontology engine.
-
-For more detailed information, refer to the source code in the repository.

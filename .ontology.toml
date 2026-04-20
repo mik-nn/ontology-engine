@@ -23,7 +23,7 @@ push   = false
 
 [llm]
 provider         = "ollama"
-model            = "qwen2.5-coder:latest"
+model            = "deepseek-coder-v2:16b"
 base_url         = "http://localhost:11434"
 verbose          = true
 fallback         = false          # Avoid claude-code fallback
@@ -33,7 +33,7 @@ fallback         = false          # Avoid claude-code fallback
 # Requires: ollama pull qwen2.5-coder:14b
 [llm.write]
 provider = "ollama"
-model    = "qwen2.5-coder:latest"
+model    = "deepseek-coder-v2:16b"
 base_url = "http://localhost:11434"
 fallback = true   # use [llm] if Ollama is not running
 
@@ -42,7 +42,7 @@ fallback = true   # use [llm] if Ollama is not running
 # Requires: ollama pull deepseek-r1:14b
 [llm.reasoning]
 provider = "ollama"
-model    = "deepseek-r1:14b"
+model    = "deepseek-coder-v2:16b"
 base_url = "http://localhost:11434"
 fallback = true   # use [llm] if Ollama is not running
 
