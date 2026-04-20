@@ -13,12 +13,14 @@ commit = false
 push   = false
 
 # ── LLM Provider ─────────────────────────────────────────────────────────────
-# provider = "claude-code"   → Pro subscription via claude CLI (default, no API key)
-# provider = "anthropic"     → Anthropic API (needs ANTHROPIC_API_KEY)
-# provider = "ollama"        → local Ollama (needs base_url)
-# provider = "gemini"        → Google Gemini (needs GEMINI_API_KEY)
-# provider = "openai"        → OpenAI (needs OPENAI_API_KEY)
-# provider = "litellm"       → any LiteLLM model string
+# Default provider — used when role-specific configs below are absent or fail.
+# Roles:
+#   [llm]          → default fallback
+#   [llm.write]    → write-code subtasks (code generation, stub filling)
+#   [llm.reasoning]→ planning / analysis subtasks
+#
+# Set fallback = true in a role section to auto-revert to [llm] if unavailable.
+
 [llm]
 provider         = "claude-code"
 model            = "claude-sonnet-4-6"
@@ -26,16 +28,30 @@ verbose          = false          # print LLM output during execution
 thinking         = false          # extended thinking (anthropic provider only)
 thinking_budget  = 8000           # max thinking tokens (< max_tokens)
 
-# Examples (uncomment to switch provider):
+# ── Write role: code generation (Qwen2.5-Coder via local Ollama) ──────────────
+# Best for 3080Ti 16GB: qwen2.5-coder:14b (~9GB Q4_K_M)
+# Requires: ollama pull qwen2.5-coder:14b
+[llm.write]
 # provider = "ollama"
-# model    = "llama3.2"
+# model    = "qwen2.5-coder:14b"
 # base_url = "http://localhost:11434"
+# fallback = true   # use [llm] if Ollama is not running
 
-# provider = "gemini"
-# model    = "gemini-2.0-flash"
-# api_key_env = "GEMINI_API_KEY"
+# ── Reasoning role: planning & analysis (DeepSeek-R1 via local Ollama) ────────
+# Best for 3080Ti 16GB: deepseek-r1:14b (~9GB Q4_K_M)
+# Requires: ollama pull deepseek-r1:14b
+[llm.reasoning]
+# provider = "ollama"
+# model    = "deepseek-r1:14b"
+# base_url = "http://localhost:11434"
+# fallback = true   # use [llm] if Ollama is not running
 
-# provider = "anthropic"
-# model    = "claude-sonnet-4-6"
-# thinking = true
-# thinking_budget = 10000
+# ── KIMI K2 via API (Moonshot AI) ─────────────────────────────────────────────
+# API-only, 1T MoE — large context (128K), good for analysis tasks
+# Requires: export MOONSHOT_API_KEY=...
+# [llm.reasoning]
+# provider    = "litellm"
+# model       = "openai/moonshot-v1-128k"
+# base_url    = "https://api.moonshot.cn/v1"
+# api_key_env = "MOONSHOT_API_KEY"
+# fallback    = true

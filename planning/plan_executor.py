@@ -68,9 +68,10 @@ class ExecutionReport:
 class PlanExecutor:
     """Runs each subtask in topological order."""
 
-    def __init__(self, store: GraphStore, verbose: bool = True):
+    def __init__(self, store: GraphStore, verbose: bool = True, metrics=None):
         self.store = store
         self.verbose = verbose
+        self._metrics = metrics  # pipeline.metrics.PipelineMetrics, optional
         self._builder = ContextBuilder(store, max_depth=MAX_DEPTH, max_tokens=MAX_TOKENS)
         self._pruner  = ContextPruner(max_tokens=MAX_TOKENS)
 
@@ -155,12 +156,28 @@ class PlanExecutor:
 
     def _exec_llm(self, node: SubtaskNode, ctx, spec: "PlanSpec") -> str:
         from execution.llm_executor import LLMExecutor
+        from execution.adapters.factory import create_for_role
         from cli.config import find_config, load_config
+        from planning.task_type_registry import get as get_task_cfg
         cfg_path = find_config()
-        llm_cfg = load_config(cfg_path).get("llm", {"provider": "claude-code"})
+        full_cfg = load_config(cfg_path)
+        llm_cfg  = full_cfg.get("llm", {"provider": "claude-code"})
+
+        # Registry-driven: plan's task type → llm_role + thinking override
+        task_cfg = get_task_cfg(spec.original_type)
+        role     = task_cfg.llm_role
+        thinking = task_cfg.thinking or llm_cfg.get("thinking", False)
+
+        adapter = create_for_role(full_cfg, role)
 
         ai_todos = self._collect_ai_todos(ctx.anchor_uri)
-        executor = LLMExecutor.from_config(llm_cfg)
+        executor = LLMExecutor(
+            adapter=adapter,
+            max_tokens=llm_cfg.get("max_tokens", 8096),
+            thinking=thinking,
+            thinking_budget=llm_cfg.get("thinking_budget", 8000),
+            verbose=llm_cfg.get("verbose", False),
+        )
 
         # For write subtasks: resolve target file and feed current content to LLM
         target_file: str | None = None
@@ -179,6 +196,8 @@ class PlanExecutor:
         if spec.original_request and node.name in self._WRITE_SUBTASKS:
             task_desc = f"Original request: {spec.original_request}\n\n{task_desc}"
 
+        import time as _time
+        t0 = _time.monotonic()
         result = executor.run(
             task_description=task_desc,
             context=ctx,
@@ -186,13 +205,29 @@ class PlanExecutor:
             target_file=target_file,
             target_file_content=target_content,
         )
+        elapsed = round(_time.monotonic() - t0, 2)
         self._store_llm_output(node, result.output)
+
+        # Emit metrics record for this LLM call
+        if self._metrics is not None:
+            from pipeline.metrics import LLMCallRecord
+            self._metrics.llm_calls.append(LLMCallRecord(
+                role=role,
+                provider=result.provider,
+                model=result.model,
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                elapsed_s=elapsed,
+            ))
 
         # Write code to disk for write-subtasks
         written = ""
+        resolved = 0
         if node.name in self._WRITE_SUBTASKS and target_file and result.output.strip():
             written = self._write_file(target_file, result.output)
-            self._mark_todos_resolved(target_file)
+            resolved = self._mark_todos_resolved(target_file)
+            if self._metrics is not None:
+                self._metrics.stubs_resolved += resolved
 
         summary = f"LLM completed ({result.summary})."
         if written:
@@ -300,8 +335,9 @@ class PlanExecutor:
         Path(path).write_text(cleaned, encoding="utf-8")
         return f"Written → {path} ({len(cleaned)} chars)"
 
-    def _mark_todos_resolved(self, file_path: str) -> None:
-        """Mark all oe:AITodo nodes for a file as resolved in the graph."""
+    def _mark_todos_resolved(self, file_path: str) -> int:
+        """Mark all oe:AITodo nodes for a file as resolved. Returns count."""
+        from rdflib import Graph
         results = list(self.store._g.query(f"""
             PREFIX oe: <https://ontologist.ai/ns/oe/>
             SELECT ?todo ?g WHERE {{
@@ -310,9 +346,10 @@ class PlanExecutor:
             }}
         """))
         for row in results:
-            todo_uri = row.todo
-            g_uri = row.g
-            self.store.add(todo_uri, OE.hasStatus, Literal("resolved"), g_uri)
+            ctx: Graph = self.store._g.get_context(row.g)
+            ctx.remove((row.todo, OE.status, None))
+            self.store.add(row.todo, OE.status, Literal("resolved"), row.g)
+        return len(results)
 
     def _store_llm_output(self, node: SubtaskNode, output: str) -> None:
         sub_uri = URIRef(node.uri)

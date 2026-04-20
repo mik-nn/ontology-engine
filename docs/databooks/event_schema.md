@@ -3,7 +3,7 @@ created: '2026-04-18'
 id: event_schema
 process:
   transformer: human
-synced_at: '2026-04-19T20:08:44.502762+00:00'
+synced_at: '2026-04-20T10:29:29.372177+00:00'
 title: Event Log Schema
 type: reference
 version: 1.1.0

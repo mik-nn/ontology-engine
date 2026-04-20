@@ -23,10 +23,10 @@ from storage.id_manager import uri as make_uri, graph_uri
 
 OE = Namespace("https://ontologist.ai/ns/oe/")
 
-_SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", ".mypy_cache", ".kilo", "build", "dist", ".eggs"}
+_SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", ".mypy_cache", ".kilo", "build", "dist", ".eggs", ".github"}
 
 # Patterns that mark a comment as an AI-Todo
-_COMMENT_RE = re.compile(r"#\s*(TODO|FIXME|AI-TODO|HACK|STAGE\s+\d+)[:\s]*(.*)", re.IGNORECASE)
+_COMMENT_RE = re.compile(r"#\s*(TODO|FIXME|AI-TODO|HACK|STAGE\s+\d+:)[:\s]*(.*)", re.IGNORECASE)
 
 # Markers in RETURN string values that mean the function IS a stub (not talks about stubs)
 _STUB_RETURN_MARKERS = {
@@ -40,8 +40,19 @@ _STUB_RETURN_MARKERS = {
 }
 
 
+def _is_abstract(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Return True if decorated with @abstractmethod or @property+@abstractmethod."""
+    for dec in func_node.decorator_list:
+        name = getattr(dec, "id", None) or getattr(dec, "attr", None) or ""
+        if name == "abstractmethod":
+            return True
+    return False
+
+
 def _is_stub_body(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[bool, str]:
     """Return (is_stub, reason) for a function AST node."""
+    if _is_abstract(func_node):
+        return False, ""
     body = func_node.body
     # Strip leading docstring for body-length check
     effective_body = body

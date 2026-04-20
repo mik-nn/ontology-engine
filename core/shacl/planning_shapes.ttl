@@ -26,8 +26,13 @@ oe:PlanShape
         sh:path oe:planType ;
         sh:datatype xsd:string ;
         sh:minCount 1 ;
-        sh:in ( "ExplainTask" "AnalysisTask" "DesignTask" "ImplementTask" "RefactorTask" ) ;
-        sh:message "Plan type must be a valid TaskType." ;
+        sh:in (
+            "ExplainTask"   "AnalysisTask"  "DesignTask"    "ImplementTask"
+            "RefactorTask"  "GitTask"       "DebugTask"     "SearchTask"
+            "DocumentTask"  "ValidateTask"  "MigrateTask"   "ReviewTask"
+            "IntegrateTask" "ComplexTask"
+        ) ;
+        sh:message "Plan type must be a valid TaskType (see task_type_registry.py)." ;
     ] .
 
 oe:SubtaskShape

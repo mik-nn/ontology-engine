@@ -89,6 +89,8 @@ class PipelineOrchestrator:
         self.git = GitClient()
 
     def run(self, request: str, graph_path: Optional[str] = None) -> PipelineRun:
+        from pipeline.metrics import PipelineMetrics
+        self._metrics = PipelineMetrics()
         run = PipelineRun(request=request, graph_path=graph_path)
 
         # ── Tool fast-path: deterministic tools skip the full pipeline ─────────
@@ -113,6 +115,7 @@ class PipelineOrchestrator:
             self._print(f"State: {state.value.upper()}")
             self._print(f"{'='*50}")
 
+            self._metrics.begin_stage(state.value)
             try:
                 handler(run)
             except Exception as exc:
@@ -124,7 +127,9 @@ class PipelineOrchestrator:
                     pipelineState=state.value,
                     errorMessage=str(exc),
                 )
+                self._metrics.end_stage(state.value)
                 break
+            self._metrics.end_stage(state.value)
 
             if run.failed:
                 break
@@ -140,6 +145,8 @@ class PipelineOrchestrator:
         else:
             self._print(f"\nPipeline FAILED: {run.errors[-1]}")
 
+        self._metrics.print_report()
+        self._metrics.emit_rdf(self.store, self.logger)
         return run
 
     # ──────────────────────────────────────────────
@@ -259,6 +266,12 @@ class PipelineOrchestrator:
             cli = VerifyCLI(self.store, rule_report)
             cli.run()
 
+        self._metrics.shacl_violations = len(rule_report.violations)
+        self._metrics.shacl_warnings  = sum(
+            1 for v in rule_report.violations if getattr(v, "severity", "") == "warning"
+        )
+        self._metrics.graph_triples = len(self.store)
+
         self.store.save(GRAPH_VERIFIED)
         run.graph_path = GRAPH_VERIFIED
         self._print(f"  Saved → {GRAPH_VERIFIED}")
@@ -282,9 +295,17 @@ class PipelineOrchestrator:
         result = classifier.classify(run.request)
         self._print(f"  task_type={result.task_type}  confidence={result.confidence:.2f}")
 
+        self._metrics.task_type = result.task_type
+        self._metrics.classification_confidence = result.confidence
+        self._metrics.classification_mode = result.mode_used
+        self._metrics.matched_entities = len(result.matched_entities)
+
         decomposer = TaskDecomposer(self.store)
         tree = decomposer.decompose(result)
         self._print(f"  subtasks={len(tree.nodes)}")
+
+        self._metrics.subtask_count = len(tree.nodes)
+        self._metrics.subtasks_with_entity_match = len(result.matched_entities)
 
         planner = TaskPlanner(self.store, shapes=SHAPES)
         self._spec = planner.plan(tree)
@@ -305,7 +326,16 @@ class PipelineOrchestrator:
         from planning.plan_executor import PlanExecutor
         from verification.rule_engine import RuleEngine
 
-        executor = PlanExecutor(self.store, verbose=self.verbose)
+        # Count open stubs before execution for resolution-rate metric
+        open_stubs = list(self.store._g.query("""
+            PREFIX oe: <https://ontologist.ai/ns/oe/>
+            SELECT (COUNT(?t) AS ?n) WHERE {
+                GRAPH ?g { ?t a oe:AITodo ; oe:status "open" }
+            }
+        """))
+        self._metrics.stubs_total = int(str(open_stubs[0][0])) if open_stubs else 0
+
+        executor = PlanExecutor(self.store, verbose=self.verbose, metrics=self._metrics)
 
         exec_report = executor.execute(self._spec)
         exec_report.print()

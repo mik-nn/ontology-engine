@@ -22,17 +22,29 @@ OE   = Namespace("https://ontologist.ai/ns/oe/")
 PROV = Namespace("http://www.w3.org/ns/prov#")
 XSD  = Namespace("http://www.w3.org/2001/XMLSchema#")
 
-# Routing rules — map TaskType → executor (deterministic, no LLM)
+# Routing rules — map subtask TaskType → executor (deterministic, no LLM).
+# These govern individual *subtask* node types, not the plan's overall type.
+# Plan-level model routing lives in task_type_registry.py.
 _EXECUTOR_MAP: dict[str, str] = {
-    "ExplainTask":  "llm",
-    "DesignTask":   "llm",
-    "ImplementTask": "llm",
-    "RefactorTask": "llm",
-    "AnalysisTask": "reasoning",
+    "ExplainTask":    "llm",
+    "DesignTask":     "llm",
+    "ImplementTask":  "llm",
+    "RefactorTask":   "llm",
+    "DocumentTask":   "llm",
+    "DebugTask":      "llm",
+    "SearchTask":     "llm",
+    "MigrateTask":    "llm",
+    "ReviewTask":     "llm",
+    "IntegrateTask":  "llm",
+    "ComplexTask":    "llm",
+    "AnalysisTask":   "reasoning",
+    "ValidateTask":   "reasoning",
+    "GitTask":        "git_client",
 }
 
 # Which task types require git_client as a post-step
-_GIT_REQUIRED = {"ImplementTask", "RefactorTask"}
+_GIT_REQUIRED = {"ImplementTask", "RefactorTask", "DocumentTask",
+                 "MigrateTask", "IntegrateTask", "ComplexTask"}
 
 
 class PlanningError(Exception):

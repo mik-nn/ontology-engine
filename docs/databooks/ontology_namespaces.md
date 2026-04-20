@@ -3,7 +3,7 @@ created: '2026-04-18'
 id: ontology_namespaces
 process:
   transformer: human
-synced_at: '2026-04-19T20:08:44.544694+00:00'
+synced_at: '2026-04-20T10:29:29.404583+00:00'
 title: Ontology Namespace Reference
 type: reference
 version: 1.1.0

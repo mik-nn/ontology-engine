@@ -1,8 +1,3 @@
-The write was blocked. The file content to replace `execution/adapters/base.py` adds docstrings to all previously undocumented members (`AdapterResult`, `__post_init__`, `summary`, `complete`, `provider_name`) to satisfy the `oe:CodeModuleShape` SHACL constraint. The abstract `complete()` body changes from `...` to a proper docstring string, which is valid Python for an abstract method.
-
-Here is the complete file content:
-
-```python
 """Base adapter interface — all LLM providers implement this."""
 from __future__ import annotations
 
@@ -64,11 +59,3 @@ class LLMAdapter(ABC):
     @abstractmethod
     def provider_name(self) -> str:
         """Return the short provider identifier (e.g. 'anthropic', 'claude-code')."""
-```
-
-Changes from current state:
-- `AdapterResult` — added class docstring
-- `__post_init__` — added one-line docstring
-- `summary` — added one-line docstring
-- `complete` — body changed from `...` to a docstring (valid abstract method body in Python)
-- `provider_name` — body changed from `...` to a docstring
