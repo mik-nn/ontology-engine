@@ -1,0 +1,4 @@
+# TODO: Sync requirements.txt
+
+- [x] 1. Update requirements.txt to match pyproject.toml deps (synced: anthropic, pyyaml, pyshacl, rdflib, rich, tomli, typer).
+
