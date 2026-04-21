@@ -1,10 +1,16 @@
 ---
-created: '2024-04-20'
-id: CONVENTIONS
-synced_at: '2026-04-20T17:22:14.976852+00:00'
-title: CONVENTIONS
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-18'
+  hierarchy: 3
+  id: CONVENTIONS
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:15.513939+00:00'
+  title: Conventions
+  type: plain-doc
+  version: '0.1'
 ---
 
 # Coding Conventions
@@ -25,4 +31,52 @@ version: '0.1'
 - Formatter: [TOOL + CONFIG FILE]
 - Linter: [TOOL + CONFIG FILE]
 - Most relevant enforced rules: [RULE_1], [RULE_2], [RULE_3]
+- Run commands: [COMMANDS]
+
+### 3) Import and Module Conventions
+
+- Import grouping/order: [RULE]
+- Alias vs relative import policy: [RULE]
+- Public exports/barrel policy: [RULE]
+
+### 4) Error and Logging Conventions
+
+- Error strategy by layer: [SHORT SUMMARY]
+- Logging style and required context fields: [SUMMARY]
+- Sensitive-data redaction rules: [SUMMARY]
+
+### 5) Testing Conventions
+
+- Test file naming/location rule: [RULE]
+- Mocking strategy norm: [RULE]
+- Coverage expectation: [RULE or TODO]
+
+### 6) Evidence
+
+- [path/to/lint-config]
+- [path/to/format-config]
+- [path/to/representative-source-file]
+
+## Extended Sections (Optional)
+
+Add only for large or inconsistent codebases:
+
+- Layer-specific error handling matrix
+- Language-specific strictness options
+- Repo-specific commit/branching conventions
+- Known convention violations to clean up
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

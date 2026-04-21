@@ -1,37 +1,20 @@
 ---
-created: '2026-04-18'
-id: event_schema
-process:
-  transformer: human
-synced_at: '2026-04-20T12:00:07.455141+00:00'
-title: Event Log Schema
-type: reference
-version: 1.1.0
----
-
 databook:
+  created: '2026-04-18'
+  depends_on:
+  - https://ontologist.ai/ns/oe/module/docs-databooks-ontology-namespaces-md
+  hierarchy: 1
   id: event_schema
-  title: "Event Log Schema"
-  version: 1.1.0
-  type: reference
-  domain: ontology-engine
-  status: active
-  created: 2026-04-18
-  updated: 2026-04-18
-  author:
-    - name: Michael
-      iri: https://ontologist.ai/agents/michael
+  layer: reference
   process:
     transformer: human
-    inputs: []
-  license: CC-BY-4.0
-  tags:
-    - events
-    - logging
-    - rdf
-    - prov-o
-    - event-first
+  scope: permanent
+  synced_at: '2026-04-21T14:11:10.015553+00:00'
+  title: Event Log Schema
+  type: reference
+  version: 1.1.0
 ---
+
 # Event Log Schema
 
 Aligned with ground truth: event-first ontology + RDF 1.2 reification + PROV-O.
@@ -79,4 +62,53 @@ GRAPH <urn:oe:pipeline:interior> {
 ```turtle
 oe:HumanAgent    a prov:Agent, prov:Person .
 oe:SystemAgent   a prov:Agent, prov:SoftwareAgent .
-oe:LLMAgent      a prov:Agent, prov:Soft
+oe:LLMAgent      a prov:Agent, prov:SoftwareAgent .
+```
+
+Agents are declared in `core/ontology/core.ttl` and referenced via `prov:wasAssociatedWith`.
+
+## Event Types
+
+| Type | Emitted By | Key Properties |
+|---|---|---|
+| `oe:ProjectScanned` | IntrospectionAgent | `oe:rootPath`, `oe:moduleCount` |
+| `oe:ModuleDetected` | IntrospectionAgent | `oe:moduleUri`, `oe:moduleType` |
+| `oe:ExternalKnowledgeAdded` | EnrichmentAgent | `oe:sourceUrl`, `oe:entityCount` |
+| `oe:UserAnswerReceived` | InterviewAgent | `oe:question`, `oe:entityCreated` |
+| `oe:OntologyValidated` | ValidationAgent | `oe:shapesUsed`, `oe:violationCount` |
+| `oe:ContextBuilt` | ContextAgent | `oe:taskUri`, `oe:tripleCount`, `oe:tokenEstimate` |
+| `oe:TaskDecomposed` | PlanningAgent | `oe:taskUri`, `oe:subtaskCount` |
+| `oe:PlanGenerated` | PlanningAgent | `oe:planUri`, `oe:stepCount` |
+| `oe:PlanExecuted` | PlanningAgent | `oe:planUri`, `oe:duration` |
+| `oe:GitCommitPushed` | GitAgent | `oe:commitHash`, `oe:filesChanged` |
+| `oe:DocumentationSynced` | DocSyncAgent | `oe:databookUri`, `oe:path` |
+| `oe:DatabookUpdated` | DocSyncAgent / IntrospectionAgent | `oe:databookUri`, `oe:version` |
+
+## Log File Convention
+
+All events are written to the **interior graph** of the active `oe:PipelineHolon`.
+Serialised daily to `logs/events/YYYY-MM-DD.trig` (TriG format, named graphs).
+
+| Path | Content |
+|---|---|
+| `logs/events/YYYY-MM-DD.trig` | Daily event log — TriG with named graphs |
+| `logs/runs/<run-id>.json` | Pipeline run summary (JSON) |
+| `logs/audit/<run-id>-shacl.txt` | SHACL validation report |
+| `logs/graphs/<run-id>.dot` | Graphviz DOT export |
+| `logs/graphs/<run-id>.json` | JSON for web viewer |
+
+## SHACL Validation of Events
+
+Events are validated by `oe:EventShape` in `core/shacl/holon_shapes.ttl` immediately after logging.
+`oe:hasAgent` and `oe:hasStatus` are required; a missing status blocks the pipeline.
+
+
+
+
+
+
+
+
+
+
+

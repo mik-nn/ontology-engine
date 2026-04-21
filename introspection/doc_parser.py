@@ -31,12 +31,28 @@ class DocParser:
         self.store = store
         self.root = Path(project_root).resolve()
 
+    # Directories treated as read-only source material — parsed for content
+    # but never registered as managed db:Databook nodes in the graph.
+    _SOURCE_DIRS = {"docs/guides", "docs/sources"}
+
     def parse_all(self) -> dict:
-        counts = {"databooks": 0, "plain_docs": 0}
+        counts = {"databooks": 0, "plain_docs": 0, "sources": 0}
+        _SKIP_DIRS = {".venv", "__pycache__", ".git", ".kilo",
+                      "node_modules", "dist", ".eggs", "ontology_engine.egg-info"}
         for path in self.root.rglob("*"):
+
             if path.is_dir() or path.suffix.lower() not in _DOC_EXTS:
                 continue
-            if any(p in {".venv", "__pycache__"} for p in path.parts):
+            if any(p in _SKIP_DIRS for p in path.parts):
+                continue
+            try:
+                rel = path.relative_to(self.root)
+            except ValueError:
+                continue
+            # Skip guide/source directories — they are read-only reference material
+            rel_str = rel.as_posix()
+            if any(rel_str.startswith(src + "/") for src in self._SOURCE_DIRS):
+                counts["sources"] += 1
                 continue
             result = self._parse_file(path)
             if result == "databook":
@@ -67,33 +83,47 @@ class DocParser:
             self._emit_databook_event(module_uri, db_meta.get("id", str(rel)))
             return "databook"
         else:
-            # Minimal Databook from filename
-            self.store.add(module_uri, DB.id, Literal(path.stem), interior)
-            self.store.add(module_uri, DB.version, Literal("0.1"), interior)
-            self.store.add(module_uri, DB.type, Literal("plain-doc"), interior)
-            self.store.add(module_uri, DB.created, Literal("2024-04-20"), interior)
-            self.store.add(module_uri, DB.title, Literal(path.stem), interior)
-            self.store.add(module_uri, DB.content, Literal(content[:500]), interior)
+            # Minimal Databook from filename — registered so ContextBuilder and DocSync can find it
+            title = _infer_title(path)
+            self.store.add(module_uri, RDF.type,   OE.Databook,             projection)
+            self.store.add(module_uri, RDF.type,   DB.Databook,             projection)
+            self.store.add(module_uri, DB.id,      Literal(_slugify_id(path.stem)), interior)
+            self.store.add(module_uri, DB.version, Literal("0.1"),          interior)
+            self.store.add(module_uri, DB.type,    Literal("plain-doc"),    interior)
+            self.store.add(module_uri, DB.created, Literal(_file_date(path)), interior)
+            self.store.add(module_uri, DB.title,   Literal(title),          interior)
+            self.store.add(module_uri, DB.content, Literal(_strip_frontmatter(content)), interior)
+            # Auto-assign classification defaults for undeclared docs
+            self.store.add(module_uri, DB.scope,       Literal("project"),  interior)
+            self.store.add(module_uri, DB.layer,       Literal("meta"),     interior)
+            self.store.add(module_uri, DB.hierarchy,
+                           Literal(3, datatype=XSD.integer),                interior)
+            self.store.add(module_uri, DB.transformer, Literal("human"),    interior)
             return "plain"
 
     def _emit_databook(self, db_meta: dict, content: str,
                        module_uri: URIRef, interior: URIRef,
                        projection: URIRef) -> None:
+        self.store.add(module_uri, RDF.type,    OE.Databook,                        projection)
         self.store.add(module_uri, RDF.type,    DB.Databook,                        projection)
-        self.store.add(module_uri, DB.id,       Literal(str(db_meta.get("id", ""))), interior)
+        self.store.add(module_uri, DB.id,       Literal(_slugify_id(str(db_meta.get("id", "")))), interior)
         self.store.add(module_uri, DB.title,    Literal(str(db_meta.get("title", ""))), interior)
         self.store.add(module_uri, DB.version,  Literal(str(db_meta.get("version", ""))), interior)
         self.store.add(module_uri, DB.type,     Literal(str(db_meta.get("type", ""))), interior)
         self.store.add(module_uri, DB.created,  Literal(str(db_meta.get("created", ""))), interior)
-        self.store.add(module_uri, DB.content,  Literal(content.strip()[:2000]),    interior)
+        body = _strip_frontmatter(content)
+        self.store.add(module_uri, DB.content,  Literal(body),                      interior)
 
         if "license" in db_meta:
             self.store.add(module_uri, DB.license, Literal(str(db_meta["license"])), interior)
 
         process = db_meta.get("process", {})
-        if isinstance(process, dict) and "transformer" in process:
-            self.store.add(module_uri, DB.transformer,
-                           Literal(str(process["transformer"])), interior)
+        transformer = process.get("transformer") if isinstance(process, dict) else None
+        if not transformer:
+            # Infer from scope: permanent/project → human; task → llm; ephemeral → sparql
+            scope_val = db_meta.get("scope", "project")
+            transformer = {"task": "llm", "ephemeral": "sparql"}.get(scope_val, "human")
+        self.store.add(module_uri, DB.transformer, Literal(transformer), interior)
 
         for a in _coerce_list(db_meta.get("author") or db_meta.get("authors", [])):
             if isinstance(a, dict):
@@ -102,6 +132,33 @@ class DocParser:
                     self.store.add(module_uri, DB.authorIRI, URIRef(a["iri"]), interior)
             else:
                 self.store.add(module_uri, DB.authorName, Literal(str(a)), interior)
+
+        # ── Classification fields (scope / layer / hierarchy / task routing) ──
+        scope = db_meta.get("scope")
+        if scope:
+            self.store.add(module_uri, DB.scope, Literal(str(scope)), interior)
+
+        layer = db_meta.get("layer")
+        if layer:
+            self.store.add(module_uri, DB.layer, Literal(str(layer)), interior)
+
+        hierarchy = db_meta.get("hierarchy")
+        if hierarchy is not None:
+            self.store.add(module_uri, DB.hierarchy,
+                           Literal(int(hierarchy), datatype=XSD.integer), interior)
+
+        task_types = _coerce_list(db_meta.get("task_types") or [])
+        if task_types:
+            joined = ",".join(str(t) for t in task_types)
+            self.store.add(module_uri, DB.taskType, Literal(joined), interior)
+
+        # depends_on: accepts either a full module URI or a bare sibling ID
+        for dep_id in _coerce_list(db_meta.get("depends_on") or []):
+            if str(dep_id).startswith("http"):
+                dep_uri = URIRef(dep_id)
+            else:
+                dep_uri = uri("module", f"docs/databooks/{dep_id}.md")
+            self.store.add(module_uri, DB.dependsOn, dep_uri, interior)
 
     def _emit_databook_event(self, module_uri: URIRef, doc_id: str) -> None:
         import uuid
@@ -119,16 +176,65 @@ class DocParser:
                        pipeline_interior)
 
 
-def _extract_frontmatter(content: str) -> Optional[dict]:
-    sep = content.find("\n---\n")
-    if sep == -1:
-        sep = content.find("\n---")
-    if sep == -1:
-        return None
+def _slugify_id(raw: str) -> str:
+    """Normalize a Databook id to a safe slug (no spaces, commas, or special chars)."""
+    import re
+    s = raw.strip()
+    s = re.sub(r"[^\w\s.\-]", "-", s)   # replace all non-slug chars with hyphens
+    s = re.sub(r"\s+", "-", s)           # spaces → hyphens
+    s = re.sub(r"-{2,}", "-", s)         # collapse multiple hyphens
+    s = s.strip("-")
+    return s[:100]
+
+
+def _infer_title(path: Path) -> str:
+    """Human-readable title from file stem (kebab/snake → Title Case words)."""
+    import re
+    stem = path.stem
+    words = re.split(r"[-_]", stem)
+    return " ".join(w.capitalize() for w in words if w)
+
+
+def _file_date(path: Path) -> str:
+    """ISO date string from file mtime, or today as fallback."""
+    from datetime import date
     try:
-        return yaml.safe_load(content[:sep])
-    except yaml.YAMLError:
-        return None
+        return date.fromtimestamp(path.stat().st_mtime).isoformat()
+    except OSError:
+        return date.today().isoformat()
+
+
+def _extract_frontmatter(content: str) -> Optional[dict]:
+    """Merge all ---/--- segments near file start — handles accumulated corrupted blocks."""
+    import re
+    segments = re.split(r'(?m)^---$', content)
+    merged: dict = {}
+    for seg in segments:  # scan all segments until markdown content
+        seg_stripped = seg.strip()
+        if not seg_stripped:
+            continue
+        if seg_stripped.lstrip().startswith('#'):  # reached Markdown content
+            break
+        try:
+            parsed = yaml.safe_load(seg_stripped)
+            if isinstance(parsed, dict) and parsed:
+                merged.update(parsed)
+        except yaml.YAMLError:
+            pass
+    return merged if merged else None
+
+
+def _strip_frontmatter(content: str) -> str:
+    """Return markdown body with all leading YAML frontmatter blocks removed."""
+    lines = content.split('\n')
+    last_sep = -1
+    for i, line in enumerate(lines[:150]):  # only scan first 150 lines
+        if line.strip() == '---':
+            last_sep = i
+    if last_sep >= 0:
+        body = '\n'.join(lines[last_sep + 1:])
+        return body.lstrip('\n')
+    return content
 
 
 def _coerce_list(value) -> list:

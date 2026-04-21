@@ -110,6 +110,10 @@ class PlanExecutor:
         # Pick anchor: first matched entity, or plan URI itself
         anchor = (spec.matched_entities[0] if spec.matched_entities
                   else spec.plan_uri)
+        # For project-wide tasks (DocumentTask, AnalysisTask with no specific entity),
+        # prefer a project-root or well-connected anchor over plan URI
+        if not spec.matched_entities or anchor == spec.plan_uri:
+            anchor = self._find_project_anchor() or anchor
 
         # Build context
         raw    = self._builder.build(anchor)
@@ -125,21 +129,30 @@ class PlanExecutor:
             }
             for i, n in enumerate(spec.ordered_subtasks)
         ]
+        # For DocumentTask (and AnalysisTask): inject all databooks so LLM
+        # can see the full project design documentation, not just BFS neighbours.
+        if spec.original_type in ("DocumentTask", "AnalysisTask", "ExplainTask"):
+            all_dbs = self._collect_all_databooks()
+            if all_dbs:
+                raw.databook_fragments = all_dbs
         pruned = self._pruner.prune(raw)
 
+        from execution.task_router import router as _router
+        mode = _router.route(spec.original_type, node.executor, node.name)
+
         try:
-            if node.executor == "reasoning":
-                output = self._exec_reasoning(node, pruned)
-            elif node.executor == "llm":
-                output = self._exec_llm(node, pruned, spec)
-            elif node.executor == "git_client":
+            if mode == "logical":
+                output = self._exec_logical(node, pruned)
+            elif mode == "structured":
+                output = self._exec_structured(node, pruned, spec)
+            elif mode == "git":
                 output = self._exec_git(node, pruned)
-            else:
-                output = f"Unknown executor '{node.executor}' — skipped."
+            else:  # mode == "llm"
+                output = self._exec_llm(node, pruned, spec)
 
             return ExecutionResult(
                 subtask_name=node.name,
-                executor=node.executor,
+                executor=mode,       # actual mode used, not decomposition hint
                 status="completed",
                 output_summary=output,
                 context_token_estimate=pruned.token_estimate,
@@ -157,14 +170,45 @@ class PlanExecutor:
     # Executors
     # ──────────────────────────────────────────────
 
-    def _exec_reasoning(self, node: SubtaskNode, ctx) -> str:
-        triples = ctx.triple_count
-        entities = len(ctx.entity_summaries)
-        return (f"Reasoning completed: {triples} triples analysed, "
-                f"{entities} entities in scope.")
+    def _exec_logical(self, node: SubtaskNode, ctx) -> str:
+        """Run LogicalExecutor: SPARQL + owlrl + pyshacl — no LLM."""
+        from execution.logical_executor import LogicalExecutor
+        executor = LogicalExecutor(self.store)
+        result   = executor.run(node)
+        return executor.format_output(result)
+
+    def _exec_structured(self, node: SubtaskNode, ctx, spec: "PlanSpec") -> str:
+        """Run StructuredOutputExecutor: SHACL MadLibs → LLM → validate."""
+        from execution.structured_output_executor import StructuredOutputExecutor
+        from cli.config import find_config, load_config
+        from planning.task_type_registry import get as get_task_cfg
+
+        cfg_path = find_config()
+        full_cfg = load_config(cfg_path)
+        llm_cfg  = full_cfg.get("llm", {"provider": "claude-code"})
+        task_cfg = get_task_cfg(spec.original_type)
+        llm_cfg["llm_role"] = task_cfg.llm_role
+
+        executor = StructuredOutputExecutor(self.store)
+        result   = executor.run(node, ctx, spec, llm_cfg)
+
+        # If SHACL validation failed, surface violations in the summary
+        if not result.conforms and result.violations:
+            if self.verbose:
+                print(f"    ⚠  SHACL violations ({len(result.violations)}):")
+                for v in result.violations[:3]:
+                    print(f"       {v}")
+
+        return executor.format_output(result)
 
     # Write-subtask names that should produce file content and write it to disk
-    _WRITE_SUBTASKS = {"write-code", "apply-changes", "generate-explanation"}
+    _WRITE_SUBTASKS = {
+        "write-code", "apply-changes", "generate-explanation",
+        "write-documentation", "write-docs",          # DocumentTask
+        "apply-migration", "apply-refactor",           # MigrateTask / RefactorTask
+        "apply-fix", "write-glue-code",                # DebugTask / IntegrateTask
+        "execute-solution", "draft-structure",         # ComplexTask / DesignTask
+    }
 
     def _exec_llm(self, node: SubtaskNode, ctx, spec: "PlanSpec") -> str:
         from execution.llm_executor import LLMExecutor
@@ -296,6 +340,76 @@ class PlanExecutor:
     # Helpers
     # ──────────────────────────────────────────────
 
+    def _find_project_anchor(self) -> str | None:
+        """Return a well-connected module URI suitable for project-wide context.
+
+        Prefers the pipeline orchestrator (most dependsOn edges) or the first
+        CodeModule found. Falls back to None.
+        """
+        OE_ns = Namespace("https://ontologist.ai/ns/oe/")
+        # Prefer known hub modules
+        preferred = ("pipeline-pipeline-orchestrator-py",
+                     "storage-graph-store-py",
+                     "context-context-builder-py")
+        for ctx in self.store._g.contexts():
+            for s in ctx.subjects(RDF.type, OE_ns.CodeModule):
+                local = str(s).split("/")[-1]
+                if local in preferred:
+                    return str(s)
+        # Fallback: first module
+        for ctx in self.store._g.contexts():
+            for s in ctx.subjects(RDF.type, OE_ns.CodeModule):
+                return str(s)
+        return None
+
+    _DOC_PRIORITY_KEYWORDS = (
+        "architecture", "adr", "implementation_plan", "implementation plan",
+        "readme", "agents", "stack", "structure", "pipeline", "ontology",
+        "conventions", "workflow", "design", "overview", "event_schema",
+    )
+
+    def _collect_all_databooks(self) -> list[dict]:
+        """Return project Databooks sorted by relevance for project-wide context.
+
+        Architecture docs, ADRs, and design docs come first. Each entry is
+        capped at 800 chars to keep the total context reasonable.
+        """
+        OE_ns = Namespace("https://ontologist.ai/ns/oe/")
+        DB_ns = Namespace("https://ontologist.ai/ns/databook#")
+        seen: set[str] = set()
+        priority: list[dict] = []
+        other: list[dict] = []
+
+        for ctx in self.store._g.contexts():
+            for s in ctx.subjects(RDF.type, OE_ns.Databook):
+                uri_str = str(s)
+                if uri_str in seen:
+                    continue
+                seen.add(uri_str)
+                title   = self.store._g.value(s, DB_ns.title)
+                content = self.store._g.value(s, DB_ns.content)
+                if not (title or content):
+                    continue
+                # Skip node_modules / build / venv docs
+                if any(skip in uri_str
+                       for skip in ("node-modules", "node_modules", "/build/",
+                                    "/.venv/", "/dist/", "/.eggs/")):
+                    continue
+                title_str   = str(title)   if title   else "(untitled)"
+                content_str = str(content)[:800] if content else ""
+                entry = {"uri": uri_str, "title": title_str, "content_excerpt": content_str}
+                # Sort: architecture/design docs first, TODOs/changelogs later
+                title_lower = title_str.lower()
+                uri_lower   = uri_str.lower()
+                if any(k in title_lower or k in uri_lower
+                       for k in self._DOC_PRIORITY_KEYWORDS):
+                    priority.append(entry)
+                else:
+                    other.append(entry)
+
+        # Return up to 30 priority + 20 other (keeps context manageable)
+        return (priority[:30] + other[:20])
+
     def _collect_ai_todos(self, anchor_uri: str) -> list[dict]:
         """Return AI-Todos linked to the anchor module (or all if none linked)."""
         results = list(self.store._g.query(f"""
@@ -347,8 +461,8 @@ class PlanExecutor:
             ("agents", "AGENTS.md"),
         ]
         for keyword, filename in _KEYWORD_FILES:
-            if keyword in req_lower and Path(filename).exists():
-                return filename
+            if keyword in req_lower:
+                return filename  # return even if file doesn't exist yet
         return None
 
     def _write_file(self, path: str, content: str) -> str:

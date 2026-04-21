@@ -12,5 +12,8 @@ Requires-Dist: tomli>=2.0; python_version < "3.11"
 Requires-Dist: anthropic>=0.40
 Provides-Extra: litellm
 Requires-Dist: litellm>=1.40; extra == "litellm"
+Provides-Extra: tavily
+Requires-Dist: tavily-python>=0.4.0; extra == "tavily"
+Requires-Dist: requests; extra == "tavily"
 Provides-Extra: all-providers
 Requires-Dist: litellm>=1.40; extra == "all-providers"

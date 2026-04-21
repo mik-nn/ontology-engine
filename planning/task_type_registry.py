@@ -5,11 +5,17 @@ Each TaskTypeConfig declares HOW a task type should be executed:
   - thinking:       enable extended thinking for this class of problem
   - search_before:  run WebSearch enrichment before LLM call
   - interview_gaps: SHACL gap codes to surface in the interview stage
+  - executor_mode:  "logical" | "generative" | "hybrid"
+      logical    — pure SPARQL + owlrl + pyshacl, no LLM (ValidateTask, GitTask)
+      generative — LLM with SHACL-shaped structured output (DocumentTask, ImplementTask…)
+      hybrid     — reasoning subtasks → LogicalExecutor;
+                   llm subtasks → StructuredOutputExecutor (AnalysisTask, DesignTask)
 
-The registry drives three pipeline decisions without LLM involvement:
+The registry drives four pipeline decisions without LLM involvement:
   1. Model selection  — PlanExecutor reads llm_role → factory.create_for_role()
   2. Thinking toggle  — PlanExecutor passes thinking=True to LLMExecutor
-  3. Pre-execution enrichment (future) — search_before triggers web tools
+  3. Executor mode    — TaskRouter reads executor_mode → routes to correct executor
+  4. Pre-execution enrichment (future) — search_before triggers web tools
 
 Adding a new task type here automatically propagates to the entire pipeline.
 """
@@ -24,6 +30,7 @@ class TaskTypeConfig:
     thinking: bool              # enable extended thinking for this type
     search_before: bool         # trigger web-search enrichment pre-LLM
     interview_gaps: tuple       # SHACL gap codes to check before execution
+    executor_mode: str = "generative"  # "logical" | "generative" | "hybrid"
     description: str = ""       # human-readable purpose
 
 
@@ -41,6 +48,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=("G04",),
+        executor_mode="generative",
         description="Create or extend code: modules, classes, functions, adapters.",
     ),
     "ExplainTask": TaskTypeConfig(
@@ -48,6 +56,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=("G04",),
+        executor_mode="generative",
         description="Answer questions, summarise, clarify how something works.",
     ),
     "RefactorTask": TaskTypeConfig(
@@ -55,6 +64,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=("G04",),
+        executor_mode="generative",
         description="Restructure existing code without changing external behaviour.",
     ),
     "AnalysisTask": TaskTypeConfig(
@@ -62,6 +72,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=(),
+        executor_mode="hybrid",
         description="Investigate, audit, scan, or report on project state.",
     ),
     "DesignTask": TaskTypeConfig(
@@ -69,6 +80,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=True,
         search_before=False,
         interview_gaps=(),
+        executor_mode="hybrid",
         description="Architect, model, or plan structure — blueprint before code.",
     ),
     "GitTask": TaskTypeConfig(
@@ -76,6 +88,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=(),
+        executor_mode="logical",
         description="Git operations: commit, push, stage, sync.",
     ),
 
@@ -83,16 +96,18 @@ REGISTRY: dict[str, TaskTypeConfig] = {
 
     "DebugTask": TaskTypeConfig(
         llm_role="reasoning",
-        thinking=True,               # root-cause reasoning benefits from thinking
+        thinking=True,
         search_before=False,
         interview_gaps=(),
+        executor_mode="hybrid",
         description="Diagnose failures, trace errors, find root cause.",
     ),
     "SearchTask": TaskTypeConfig(
         llm_role="default",
         thinking=False,
-        search_before=True,          # web-search runs before LLM
+        search_before=True,
         interview_gaps=("G06",),
+        executor_mode="generative",
         description="Look up external documentation, APIs, or specs.",
     ),
     "DocumentTask": TaskTypeConfig(
@@ -100,6 +115,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=("G01", "G02", "G03"),
+        executor_mode="generative",
         description="Write or update documentation, READMEs, databooks.",
     ),
     "ValidateTask": TaskTypeConfig(
@@ -107,13 +123,15 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=(),
+        executor_mode="logical",
         description="Run tests, SHACL validation, lint, or type checking.",
     ),
     "MigrateTask": TaskTypeConfig(
         llm_role="write",
-        thinking=True,               # migration scope often requires deep reasoning
+        thinking=True,
         search_before=True,
         interview_gaps=("G06",),
+        executor_mode="generative",
         description="Upgrade APIs, schemas, or libraries to a new version.",
     ),
     "ReviewTask": TaskTypeConfig(
@@ -121,6 +139,7 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=False,
         interview_gaps=(),
+        executor_mode="hybrid",
         description="Code review, quality assessment, security audit.",
     ),
     "IntegrateTask": TaskTypeConfig(
@@ -128,13 +147,15 @@ REGISTRY: dict[str, TaskTypeConfig] = {
         thinking=False,
         search_before=True,
         interview_gaps=("G06",),
+        executor_mode="generative",
         description="Connect two systems/modules — adapters, bridges, wiring.",
     ),
     "ComplexTask": TaskTypeConfig(
-        llm_role="complex",          # → [llm.complex] = Claude Opus w/ thinking
+        llm_role="complex",
         thinking=True,
         search_before=True,
         interview_gaps=(),
+        executor_mode="generative",
         description="High-uncertainty multi-step problems requiring deep reasoning.",
     ),
 }

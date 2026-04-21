@@ -36,10 +36,15 @@ def run(
     console.print(f"[bold cyan]Project:[/bold cyan] {root}")
     console.print(f"[bold cyan]Request:[/bold cyan] {request}\n")
 
+    pipeline_cfg = cfg.get("pipeline", {})
+    effective_auto   = auto   or pipeline_cfg.get("auto",   False)
+    effective_commit = commit or pipeline_cfg.get("commit", False)
+    effective_push   = push   or pipeline_cfg.get("push",   False)
+
     prev = os.getcwd()
     os.chdir(root)
     try:
-        orchestrator = PipelineOrchestrator(auto=auto, commit=commit, push=push, verbose=verbose)
+        orchestrator = PipelineOrchestrator(auto=effective_auto, commit=effective_commit, push=effective_push, verbose=verbose)
         result = orchestrator.run(request)
     except SystemExit as e:
         if e.code:

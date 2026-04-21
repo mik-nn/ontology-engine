@@ -56,6 +56,8 @@ class ContextPruner:
             return self._finalize(p)
 
         p = self._pass_truncate_content(p)
+        if p.token_estimate > self.max_tokens:
+            p = self._signal_decomposition(p)
         return self._finalize(p)
 
     # ──────────────────────────────────────────────
@@ -131,9 +133,41 @@ class ContextPruner:
 
         return p
 
+    def _signal_decomposition(self, p: ContextPacket) -> ContextPacket:
+        """Mark the packet as needing task decomposition.
+
+        Called when all pruning passes are exhausted and the token budget
+        is still exceeded.  The hint describes *why* the context is too
+        large so the planner can split the task appropriately.
+        """
+        p.needs_decomposition = True
+        entity_count = len(p.included)
+        db_count = len(p.databook_fragments)
+        over_by = p.token_estimate - self.max_tokens
+        existing_hint = p.decomposition_hint  # may already have chunking note
+
+        hint_parts = [
+            f"Context exceeds budget by ~{over_by} tokens "
+            f"({p.token_estimate} > {self.max_tokens}).",
+            f"Scope: {entity_count} entities, {db_count} databooks.",
+            "Decomposition options:",
+            "  • Narrow anchor — use a single function/class instead of a module.",
+            "  • Split by layer — request architecture or implementation layer only.",
+            "  • Break task — decompose into subtasks with separate context packets.",
+        ]
+        if existing_hint:
+            hint_parts.append(existing_hint)
+
+        p.decomposition_hint = " ".join(hint_parts)
+        return p
+
     def _finalize(self, p: ContextPacket) -> ContextPacket:
         # Rebuild databook fragments from remaining records
-        p.databook_fragments = self._rebuild_fragments(p)
+        from_records = self._rebuild_fragments(p)
+        if from_records:
+            # Records-derived fragments take precedence (properly pruned)
+            p.databook_fragments = from_records
+        # else: keep whatever was injected externally (e.g. _collect_all_databooks)
         return p
 
     def _rebuild_fragments(self, p: ContextPacket) -> list[dict]:
@@ -155,6 +189,12 @@ class ContextPruner:
                     frag["content_excerpt"] = r.o
                 elif r.p == str(DB.type):
                     frag["type"] = r.o
+                elif r.p == str(DB.scope):
+                    frag["scope"] = r.o
+                elif r.p == str(DB.layer):
+                    frag["layer"] = r.o
+                elif r.p == str(DB.hierarchy):
+                    frag["hierarchy"] = r.o
             if frag.get("title") or frag.get("content_excerpt"):
                 fragments.append(frag)
         return fragments

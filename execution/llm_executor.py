@@ -34,10 +34,12 @@ You receive:
 
 Rules:
 - Implement ONLY what the task asks. Do not refactor unrelated code.
-- Output implementation-ready code or documentation, not explanations.
-- When writing code: output ONLY the file content, no markdown fences unless asked.
+- Output implementation-ready content — not explanations.
+- When writing code (.py, .js, etc.): output ONLY the file content, no markdown fences.
+- When writing documentation (.md, .rst, .txt): output valid Markdown/reStructuredText directly.
 - When the task is analysis/reasoning: output a concise structured report.
 - Never invent facts not present in the context packet.
+- Do NOT wrap the output in a code fence — the pipeline writes the raw output directly to disk.
 
 MANDATORY for every Python file you generate:
 - The very first statement after imports must be a module-level docstring (\"\"\"...\"\"\").
@@ -149,9 +151,13 @@ class LLMExecutor:
         parts = [context.to_prompt_text()]
 
         if target_file and target_file_content is not None:
+            # Use the right fence type based on file extension
+            from pathlib import Path as _Path
+            ext = _Path(target_file).suffix.lower()
+            fence = "markdown" if ext in (".md", ".rst", ".txt") else "python"
             parts.append(
                 f"## TARGET FILE\n{target_file}\n\n"
-                f"## CURRENT CONTENT\n```python\n{target_file_content}\n```"
+                f"## CURRENT CONTENT\n```{fence}\n{target_file_content}\n```"
             )
 
         parts.append(f"## TASK\n{task_description}")

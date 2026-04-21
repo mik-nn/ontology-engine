@@ -9,6 +9,7 @@ from storage.graph_store import GraphStore
 from context.context_builder import ContextBuilder
 from context.context_pruner import ContextPruner
 from context.context_explainer import ContextExplainer
+from context.databook_selector import DatabookSelector
 from verification.rule_engine import RuleEngine
 
 GRAPH_IN   = "logs/graphs/verified.trig"
@@ -22,7 +23,8 @@ MAX_TOKENS = 4000
 MAX_DEPTH  = 3
 
 
-def main(anchor_uri: str | None = None, graph_path: str = GRAPH_IN) -> dict:
+def main(anchor_uri: str | None = None, graph_path: str = GRAPH_IN,
+         task_type: str | None = None) -> dict:
     store = GraphStore()
     print(f"Loading graph from {graph_path}...")
     store.load(graph_path)
@@ -52,9 +54,22 @@ def main(anchor_uri: str | None = None, graph_path: str = GRAPH_IN) -> dict:
         print("No anchor URI found — run Stage 2 first.")
         sys.exit(1)
 
+    print(f"\n=== Stage 6: DatabookSelector (task_type={task_type}) ===")
+    selector = DatabookSelector(store)
+    selected_frags = selector.select(task_type=task_type)
+    print(f"  selected databooks: {len(selected_frags)}")
+    for f in selected_frags:
+        print(f"    [{f.get('scope','?')}:{f.get('layer','?')}:h{f.get('hierarchy','?')}] {f.get('title','?')}")
+
     print(f"\n=== Stage 6: ContextBuilder (anchor={anchor_uri.split('/')[-1]}) ===")
     builder = ContextBuilder(store, max_depth=MAX_DEPTH, max_tokens=MAX_TOKENS)
     raw = builder.build(anchor_uri)
+    # Merge selector fragments — selector wins for known databooks, BFS adds code context
+    existing_uris = {f["uri"] for f in raw.databook_fragments}
+    for frag in selected_frags:
+        if frag["uri"] not in existing_uris:
+            raw.databook_fragments.append(frag)
+    raw.token_estimate = builder._estimate_tokens(raw)
     print(f"  raw triples  : {raw.triple_count}")
     print(f"  token est.   : {raw.token_estimate}")
     print(f"  databooks    : {len(raw.databook_fragments)}")
@@ -98,4 +113,5 @@ def main(anchor_uri: str | None = None, graph_path: str = GRAPH_IN) -> dict:
 
 if __name__ == "__main__":
     anchor = sys.argv[1] if len(sys.argv) > 1 else None
-    main(anchor_uri=anchor)
+    ttype  = sys.argv[2] if len(sys.argv) > 2 else None
+    main(anchor_uri=anchor, task_type=ttype)

@@ -1,10 +1,16 @@
 ---
-created: '2024-04-20'
-id: STACK
-synced_at: '2026-04-20T17:22:12.619288+00:00'
-title: STACK
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-18'
+  hierarchy: 3
+  id: STACK
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:14.304205+00:00'
+  title: Stack
+  type: plain-doc
+  version: '0.1'
 ---
 
 # Technology Stack
@@ -25,4 +31,54 @@ version: '0.1'
 List only high-impact production dependencies (frameworks, data, transport, auth).
 
 | Dependency | Version | Role in system | Evidence |
-|--
+|------------|---------|----------------|----------|
+| [NAME] | [VERSION] | [ROLE] | [FILE_PATH] |
+
+### 3) Development Toolchain
+
+| Tool | Purpose | Evidence |
+|------|---------|----------|
+| [TOOL] | [LINT/FORMAT/TEST/BUILD] | [FILE_PATH] |
+
+### 4) Key Commands
+
+```bash
+[install command]
+[build command]
+[test command]
+[lint command]
+```
+
+### 5) Environment and Config
+
+- Config sources: [LIST FILES]
+- Required env vars: [VAR_1], [VAR_2], [TODO]
+- Deployment/runtime constraints: [SHORT NOTE]
+
+### 6) Evidence
+
+- [path/to/manifest]
+- [path/to/runtime-config]
+- [path/to/build-or-ci-config]
+
+## Extended Sections (Optional)
+
+Add only when needed for complex repos:
+
+- Full dependency taxonomy by category
+- Detailed compiler/runtime flags
+- Environment matrix (dev/stage/prod)
+- Process manager and container runtime details
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -373,5 +373,50 @@ db:transformer a owl:DatatypeProperty ;
 
 db:content a owl:DatatypeProperty ;
     rdfs:domain db:Databook ;
+    rdfs:range xsd:string .
+
+# ── Databook classification ────────────────────────────────
+# scope: lifecycle bucket for dynamic assembly
+#   permanent  — always loaded (architecture, conventions, ADRs)
+#   project    — project-level context (stack, structure, sources)
+#   task       — loaded only when task_type matches
+#   ephemeral  — time-bounded (changelogs, dated logs, TODOs)
+db:scope a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
     rdfs:range xsd:string ;
-    rdfs:label "content body" .
+    rdfs:label "scope" ;
+    rdfs:comment "Lifecycle bucket: permanent | project | task | ephemeral" .
+
+# layer: semantic layer for graph visualization filtering
+#   architecture  — decisions, ADRs, design principles
+#   reference     — namespaces, schemas, canonical definitions
+#   implementation — implementation plans, code conventions
+#   meta          — databook-about-databooks, pipeline internals
+#   spec          — requirements, SHACL shapes, formal contracts
+db:layer a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "layer" ;
+    rdfs:comment "Semantic layer: architecture | reference | implementation | meta | spec" .
+
+# hierarchy: depth in the knowledge graph (0=top, 3=detail)
+db:hierarchy a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:integer ;
+    rdfs:label "hierarchy level" ;
+    rdfs:comment "0=top-level, 3=deep detail. Used for visualization zoom levels." .
+
+# taskType: task type tags; only relevant when scope=task
+db:taskType a owl:DatatypeProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range xsd:string ;
+    rdfs:label "task type" ;
+    rdfs:comment "Comma-separated task types that trigger loading: testing, planning, sync, introspection, implementation" .
+
+# dependsOn: explicit knowledge dependency between Databooks
+# These edges form the reasoning chain paths in the graph
+db:dependsOn a owl:ObjectProperty ;
+    rdfs:domain db:Databook ;
+    rdfs:range db:Databook ;
+    rdfs:label "depends on" ;
+    rdfs:comment "Explicit knowledge dependency. Chains are visualizable as graph paths." .

@@ -1,0 +1,28 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix oe:   <https://ontologist.ai/ns/oe/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+oe:PipelineHolonShape
+  a sh:NodeShape ;
+  sh:targetClass oe:PipelineHolon ;
+  sh:property [
+    sh:path oe:stages ;
+    sh:minCount 1 ;
+    sh:node oe:PipelineStageShape ;
+  ] .
+
+oe:PipelineStageShape
+  a sh:NodeShape ;
+  sh:property [
+    sh:path oe:stageId ;
+    sh:datatype xsd:string ;
+    sh:minCount 1 ;
+    sh:message "A pipeline stage must have an ID." ;
+  ] ;
+  sh:property [
+    sh:path oe:stageExecutor ;
+    sh:datatype xsd:string ;
+    sh:in ( "llm" "reasoning" "git_client" "logical" "structured" ) ;
+    sh:message "Stage executor must be a known type." ;
+  ] .

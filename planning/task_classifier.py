@@ -290,10 +290,6 @@ class TaskClassifier:
             result = self._mode2(request, result)
 
         result.matched_entities = result.matched_entities or self._match_entities(request)
-        if result.confidence < 0.6:
-            result.task_type = "AnalysisTask"
-            result.confidence = 0.55
-            # Low match → needs enrichment/search/interview
         self._emit_event(result)
         return result
 
@@ -332,26 +328,26 @@ class TaskClassifier:
         Returns None if no entities are found in the graph.
         """
         matched_uris = self._match_entities(request)
-        if not matched_uris:
-            return None
 
-        # Build FILTER clause — SPARQL IN() requires comma-separated values
-        uri_list = ", ".join(f"<{u}>" for u in matched_uris[:20])
-
-        # Step 1: direct rdf:type for each matched entity
-        type_sparql = (
-            "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
-            "SELECT DISTINCT ?entity ?entityType WHERE {\n"
-            "  ?entity rdf:type ?entityType .\n"
-            f"  FILTER(?entity IN ({uri_list}))\n"
-            "}"
-        )
         direct_types: set[str] = set()
         type_uris: set[str] = set()
-        for row in self.store.query(type_sparql):
-            local = str(row.entityType).split("/")[-1].split("#")[-1]
-            direct_types.add(local)
-            type_uris.add(str(row.entityType))
+
+        if matched_uris:
+            # Build FILTER clause — SPARQL IN() requires comma-separated values
+            uri_list = ", ".join(f"<{u}>" for u in matched_uris[:20])
+
+            # Step 1: direct rdf:type for each matched entity
+            type_sparql = (
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
+                "SELECT DISTINCT ?entity ?entityType WHERE {\n"
+                "  ?entity rdf:type ?entityType .\n"
+                f"  FILTER(?entity IN ({uri_list}))\n"
+                "}"
+            )
+            for row in self.store.query(type_sparql):
+                local = str(row.entityType).split("/")[-1].split("#")[-1]
+                direct_types.add(local)
+                type_uris.add(str(row.entityType))
 
         # Step 2: superclasses via owlrl-materialized rdfs:subClassOf triples.
         # After reason(), transitive closure is already in the graph as direct triples
@@ -397,6 +393,11 @@ class TaskClassifier:
             best_type = verb_task
             confidence = 0.65
             mode = "sparql+verb_override"
+        elif verb_task:
+            # No entity match but verb is unambiguous — trust it with moderate confidence
+            best_type = verb_task
+            confidence = 0.55
+            mode = "verb_only"
         elif best_score > 0:
             confidence = min(0.70, 0.40 + best_score * 0.15)
             mode = "sparql_type"
@@ -488,14 +489,22 @@ class TaskClassifier:
         return matched
 
     def _build_module_index(self) -> dict[str, str]:
-        """Build {local_name → full_uri} for all CodeModules and CodeFunctions."""
+        """Build {local_name → full_uri} for CodeModules and Databooks.
+
+        CodeFunctions are intentionally excluded — single-word function names
+        (add, save, load, query…) cause false-positive entity matches against
+        common English words in the user's request.
+        """
+        from rdflib import Namespace as _NS
+        DB = _NS("https://ontologist.ai/ns/databook#")
         index: dict[str, str] = {}
         for ctx in self.store._g.contexts():
             for s in ctx.subjects(RDF.type, OE.CodeModule):
                 local = str(s).split("/")[-1]
                 index[local] = str(s)
-            for s in ctx.subjects(RDF.type, OE.CodeFunction):
-                fn_name = self.store._g.value(s, OE.functionName)
-                if fn_name:
-                    index[str(fn_name)] = str(s)
+            # Databooks matched by title (multi-word, safe from false positives)
+            for s in ctx.subjects(RDF.type, DB.Databook):
+                title = self.store._g.value(s, DB.title)
+                if title and len(str(title)) > 4:
+                    index[str(title).lower()] = str(s)
         return index

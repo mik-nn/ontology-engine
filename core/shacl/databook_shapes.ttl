@@ -14,6 +14,23 @@ db:DatabookShape
     ] ;
 
     sh:property [
+        sh:path db:id ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[A-Za-z0-9][A-Za-z0-9_.\\-]*$" ;
+        sh:maxLength 100 ;
+        sh:severity sh:Violation ;
+        sh:message "Databook id must be a slug: alphanumeric, hyphens, underscores, dots only — no spaces or commas." ;
+    ] ;
+
+    sh:property [
+        sh:path db:content ;
+        sh:datatype xsd:string ;
+        sh:minLength 50 ;
+        sh:severity sh:Warning ;
+        sh:message "Databook content is suspiciously short — may be truncated." ;
+    ] ;
+
+    sh:property [
         sh:path db:title ;
         sh:datatype xsd:string ;
         sh:minCount 1 ;
@@ -53,4 +70,43 @@ db:DatabookShape
         sh:datatype xsd:string ;
         sh:in ( "human" "llm" "sparql" "xslt" ) ;
         sh:message "transformer must be one of: human, llm, sparql, xslt." ;
+    ] ;
+
+    sh:property [
+        sh:path db:scope ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "permanent" "project" "task" "ephemeral" ) ;
+        sh:severity sh:Warning ;
+        sh:message "scope should be one of: permanent, project, task, ephemeral." ;
+    ] ;
+
+    sh:property [
+        sh:path db:layer ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "architecture" "reference" "implementation" "meta" "spec" ) ;
+        sh:severity sh:Warning ;
+        sh:message "layer should be one of: architecture, reference, implementation, meta, spec." ;
+    ] ;
+
+    sh:property [
+        sh:path db:hierarchy ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 3 ;
+        sh:severity sh:Warning ;
+        sh:message "hierarchy should be an integer 0–3." ;
+    ] ;
+
+    sh:property [
+        sh:path db:taskType ;
+        sh:datatype xsd:string ;
+        sh:message "taskType must be a string (comma-separated task type tags)." ;
+    ] ;
+
+    sh:property [
+        sh:path db:dependsOn ;
+        sh:class db:Databook ;
+        sh:message "dependsOn must reference a db:Databook." ;
     ] .

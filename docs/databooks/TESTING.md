@@ -1,19 +1,16 @@
 ---
-created: '2024-04-20'
-id: TESTING
-synced_at: '2026-04-20T17:22:22.662424+00:00'
-title: TESTING
-type: plain-doc
-version: '0.1'
----
-
----
-created: '2024-04-20'
-id: TESTING
-synced_at: '2026-04-20T17:20:00.010662+00:00'
-title: TESTING
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-18'
+  hierarchy: 3
+  id: TESTING
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:13.918781+00:00'
+  title: Testing
+  type: plain-doc
+  version: '0.1'
 ---
 
 # Testing Patterns
@@ -36,4 +33,55 @@ version: '0.1'
 ### 2) Test Layout
 
 - Test file placement pattern: [co-located/tests folder/etc]
-- Naming convention: [p
+- Naming convention: [pattern]
+- Setup files and where they run: [paths]
+
+### 3) Test Scope Matrix
+
+| Scope | Covered? | Typical target | Notes |
+|-------|----------|----------------|-------|
+| Unit | [yes/no] | [modules/services] | [notes] |
+| Integration | [yes/no] | [API/data boundaries] | [notes] |
+| E2E | [yes/no] | [user flows] | [notes] |
+
+### 4) Mocking and Isolation Strategy
+
+- Main mocking approach: [module/class/network]
+- Isolation guarantees: [what is reset and when]
+- Common failure mode in tests: [short note]
+
+### 5) Coverage and Quality Signals
+
+- Coverage tool + threshold: [value or TODO]
+- Current reported coverage: [value or TODO]
+- Known gaps/flaky areas: [list]
+
+### 6) Evidence
+
+- [path/to/test-config]
+- [path/to/representative-test-file]
+- [path/to/ci-or-coverage-config]
+
+## Extended Sections (Optional)
+
+Add only when needed:
+
+- Framework-specific suite patterns
+- Detailed mock recipes per dependency type
+- Historical flaky test catalog
+- Test performance bottlenecks and optimization ideas
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,19 +1,16 @@
 ---
-created: '2024-04-20'
-id: CHANGELOG
-synced_at: '2026-04-20T17:22:15.976589+00:00'
-title: CHANGELOG
-type: plain-doc
-version: '0.1'
----
-
----
-created: '2024-04-20'
-id: CHANGELOG
-synced_at: '2026-04-20T17:20:01.915058+00:00'
-title: CHANGELOG
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-21'
+  hierarchy: 3
+  id: CHANGELOG
+  layer: meta
+  process:
+    transformer: sparql
+  scope: ephemeral
+  synced_at: '2026-04-21T14:11:08.234702+00:00'
+  title: Changelog
+  type: plain-doc
+  version: '0.1'
 ---
 
 # Changes
@@ -46,3 +43,13 @@ version: '0.1'
 ## v1.2.14
 
 * appveyo
+
+
+
+
+
+
+
+
+
+

@@ -36,12 +36,20 @@ Available operations:
 
 Extraction rules:
 1. For "run": put the user's change request verbatim into `request`.
+   Map to "run" for ANY request that involves creating, building, writing,
+   generating, updating, or modifying files or code — e.g.:
+     "build README.md"  →  run
+     "write a changelog"  →  run
+     "create a module for X"  →  run
+     "add mermaid diagram to docs"  →  run
+     "update the pipeline"  →  run
 2. For "explain": put the topic (rule ID like G01/R04, stage name, entity URI,
    or free-form question) into `concept`.
 3. Set is_dangerous=true + fill danger_description when the action involves:
    git commit, git push, file deletion, graph overwrite.
-4. Set needs_clarification=true + clarification_question when the input is
-   too ambiguous to pick an intent confidently.\
+4. Set needs_clarification=true + clarification_question ONLY when the input is
+   genuinely ambiguous — e.g. a single word with no clear verb or target.
+   Do NOT ask for clarification when the request clearly describes a task.\
 """
 
 _JSON_SUFFIX = """

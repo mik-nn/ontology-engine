@@ -29,6 +29,7 @@ _TRAVERSAL_OUT = {
     str(OE.definedIn),
     str(CGA.partOf),      # module → project (structural context)
     str(BUILD.dependsOn),
+    str(DB.dependsOn),    # databook knowledge dependency chain
 }
 # Incoming: pull in entities that reference the anchor — functions, tasks.
 # cga:partOf intentionally excluded here: pulling siblings via project is noise.
@@ -52,7 +53,9 @@ _METADATA = {
 
 # Predicates that bring in Databook content
 _DATABOOK_PROPS = {str(DB.title), str(DB.content), str(DB.version),
-                   str(DB.type), str(DB.created), str(DB.transformer)}
+                   str(DB.type), str(DB.created), str(DB.transformer),
+                   str(DB.scope), str(DB.layer), str(DB.hierarchy),
+                   str(DB.taskType), str(DB.dependsOn)}
 
 
 @dataclass
@@ -101,6 +104,9 @@ class ContextPacket:
     task_request: Optional[str]          = None
     task_type: Optional[str]             = None
     plan_steps: list[dict]               = field(default_factory=list)
+    # Decomposition signal — set by ContextPruner when budget cannot be met
+    needs_decomposition: bool            = False
+    decomposition_hint: str              = ""
 
     @property
     def semantic_records(self) -> list[TripleRecord]:
@@ -124,9 +130,11 @@ class ContextPacket:
                                    for r in self.semantic_records],
             "included":           self.included,
             "excluded":           self.excluded,
-            "task_request":       self.task_request,
-            "task_type":          self.task_type,
-            "plan_steps":         self.plan_steps,
+            "task_request":        self.task_request,
+            "task_type":           self.task_type,
+            "plan_steps":          self.plan_steps,
+            "needs_decomposition": self.needs_decomposition,
+            "decomposition_hint":  self.decomposition_hint,
         }
 
     def to_prompt_text(self) -> str:
@@ -163,37 +171,70 @@ class ContextPacket:
 
     # ── Section renderers ─────────────────────────────────────────────
 
+    @staticmethod
+    def _local(uri_str: str) -> str:
+        """Return the human-readable local name of a URI."""
+        frag = uri_str.split("/")[-1].split("#")[-1]
+        # Strip long hash prefix from compound IDs (module-fn pattern)
+        # e.g. "…storage-graph-store-py_add" → "add"
+        if "_" in frag:
+            parts = frag.rsplit("_", 1)
+            if len(parts[1]) <= 40:
+                return parts[1].replace("-", "_")
+        return frag.replace("-", "_")
+
     def _section_project_facts(self) -> str:
         lines = []
 
-        # Entity summaries (types + names)
+        # Entity summaries — deduplicated, showing readable name + type
         if self.entity_summaries:
             lines.append("### entities")
-            for ent_uri, summary in list(self.entity_summaries.items())[:30]:
-                local = ent_uri.split("/")[-1].replace("-", "_")
-                lines.append(f"  {local}: {summary}")
+            seen_names: set[str] = set()
+            for ent_uri, summary in list(self.entity_summaries.items())[:40]:
+                # summary is "TypeLabel: name"
+                parts = summary.split(": ", 1)
+                display = parts[1] if len(parts) == 2 else self._local(ent_uri)
+                type_label = parts[0] if len(parts) == 2 else "Entity"
+                key = f"{type_label}:{display}"
+                if key in seen_names:
+                    continue
+                seen_names.add(key)
+                lines.append(f"  {type_label}: {display}")
 
-        # Code dependencies
+        # Code dependencies (deduped)
         dep_preds = {str(OE.dependsOn), str(BUILD.requiredBy), str(BUILD.dependsOn)}
         deps = [r for r in self.semantic_records if r.p in dep_preds]
         if deps:
             lines.append("### dependencies")
+            seen_deps: set[str] = set()
             for r in deps:
-                s = r.s.split("/")[-1].replace("-", "_")
-                o = r.o.split("/")[-1].replace("-", "_")
+                s = self._local(r.s)
+                o = r.o.split("#")[-1] if "#" in r.o else self._local(r.o)
                 p = r.p.split("#")[-1].split("/")[-1]
+                key = f"{s}:{o}"
+                if key in seen_deps:
+                    continue
+                seen_deps.add(key)
                 lines.append(f"  {s} →[{p}]→ {o}")
 
-        # Public API (exports)
+        # Public API: exports → resolved names from entity_summaries
         exports = [r for r in self.semantic_records if r.p == str(OE.exports)]
         if exports:
             lines.append("### public_api")
-            for r in exports[:30]:
-                sym = r.o.split("/")[-1].replace("-", "_")
-                lines.append(f"  {sym}")
+            seen_api: set[str] = set()
+            for r in exports[:40]:
+                summary = self.entity_summaries.get(r.o, "")
+                name = summary.split(": ", 1)[1] if ": " in summary else self._local(r.o)
+                if name not in seen_api:
+                    seen_api.add(name)
+                    lines.append(f"  {name}")
 
-        # Other code facts (functions, classes, descriptions)
-        code_shown = dep_preds | {str(OE.exports)}
+        # Other code facts (absolutePath, description, lineNumber, etc.)
+        # Exclude what's already shown or implied by other sections
+        code_shown = dep_preds | {
+            str(OE.exports), str(OE.definedIn), str(CGA.partOf),
+            str(OE.functionName), str(OE.className),   # already in entities
+        }
         code_facts = [
             r for r in self.semantic_records
             if r.p in _CODE_PREDICATES and r.p not in code_shown
@@ -201,10 +242,20 @@ class ContextPacket:
         ]
         if code_facts:
             lines.append("### code_facts")
+            seen_cf: set[str] = set()
             for r in code_facts[:40]:
-                s = r.s.split("/")[-1].replace("-", "_")
+                # Resolve subject via entity_summaries when possible
+                s_summary = self.entity_summaries.get(r.s, "")
+                if ": " in s_summary:
+                    s = s_summary.split(": ", 1)[1]
+                else:
+                    s = self._local(r.s)
                 p = r.p.split("#")[-1].split("/")[-1]
-                o = r.o.split("/")[-1] if r.o.startswith("http") else r.o[:120]
+                o = self._local(r.o) if r.o.startswith("http") else r.o[:120]
+                key = f"{s}:{p}:{o}"
+                if key in seen_cf:
+                    continue
+                seen_cf.add(key)
                 lines.append(f"  {s} · {p} · {o}")
 
         return "\n".join(lines)
@@ -212,7 +263,7 @@ class ContextPacket:
     def _section_domain_knowledge(self) -> str:
         lines = []
 
-        # Databook fragments (design decisions, ADRs)
+        # Databook fragments (design decisions, ADRs, architecture)
         if self.databook_fragments:
             lines.append("### databooks")
             for frag in self.databook_fragments:
@@ -220,25 +271,19 @@ class ContextPacket:
                 if frag.get("content_excerpt"):
                     lines.append(frag["content_excerpt"])
 
-        # Ontology class hierarchy
+        # Class hierarchy from ontology (rdfs:subClassOf, rdfs:label, etc.)
         hier = [r for r in self.semantic_records if r.p in _ONTOLOGY_PREDICATES]
         if hier:
             lines.append("### class_hierarchy")
+            seen_h: set[str] = set()
             for r in hier[:20]:
                 s = r.s.split("/")[-1].split("#")[-1]
                 p = r.p.split("#")[-1].split("/")[-1]
                 o = r.o.split("/")[-1].split("#")[-1]
-                lines.append(f"  {s} {p} {o}")
-
-        # rdf:type declarations (what things ARE in the ontology)
-        type_facts = [r for r in self.semantic_records if r.p == str(RDF.type)
-                      and ("ontologist.ai" in r.o or "w3.org" in r.o)]
-        if type_facts:
-            lines.append("### ontology_types")
-            for r in type_facts[:20]:
-                s = r.s.split("/")[-1].replace("-", "_")
-                o = r.o.split("/")[-1].split("#")[-1]
-                lines.append(f"  {s} rdf:type {o}")
+                key = f"{s}:{p}:{o}"
+                if key not in seen_h:
+                    seen_h.add(key)
+                    lines.append(f"  {s} {p} {o}")
 
         return "\n".join(lines)
 
@@ -248,17 +293,21 @@ class ContextPacket:
             lines.append(f"task_type: {self.task_type}")
         if self.task_request:
             lines.append(f"request: {self.task_request}")
-        if self.entity_summaries:
-            lines.append("matched_entities:")
-            anchor = self.anchor_uri
-            lines.append(f"  anchor: {anchor.split('/')[-1]} ({self.anchor_type})")
-            for uri_str, summary in list(self.entity_summaries.items())[:10]:
-                if uri_str != anchor:
-                    lines.append(f"  - {uri_str.split('/')[-1]}: {summary}")
-        # Context provenance
-        included_count = len(self.included)
-        excluded_count = len(self.excluded)
-        lines.append(f"context_scope: {included_count} entities included, {excluded_count} excluded")
+        anchor = self.anchor_uri
+        anchor_name = anchor.split("/")[-1]
+        lines.append(f"anchor: {anchor_name} ({self.anchor_type})")
+        # Compact entity list (names only)
+        ent_names = []
+        seen_ent: set[str] = set()
+        for uri_str, summary in list(self.entity_summaries.items())[:15]:
+            parts = summary.split(": ", 1)
+            name = parts[1] if len(parts) == 2 else self._local(uri_str)
+            if name not in seen_ent:
+                seen_ent.add(name)
+                ent_names.append(name)
+        if ent_names:
+            lines.append(f"in_scope: {', '.join(ent_names)}")
+        lines.append(f"context_scope: {len(self.included)} entities, depth={self.depth_used}")
         return "\n".join(lines)
 
     def _section_agent_instructions(self) -> str:
@@ -303,7 +352,12 @@ class ContextBuilder:
         self.max_depth = max_depth
         self.max_tokens = max_tokens
 
-    def build(self, anchor_uri: str) -> ContextPacket:
+    # Fraction of max_tokens reserved for databook content
+    _DATABOOK_BUDGET_RATIO = 0.45
+
+    def build(self, anchor_uri: str,
+              task_request: str | None = None,
+              task_type: str | None = None) -> ContextPacket:
         anchor = URIRef(anchor_uri)
         anchor_type = self._type_label(anchor)
 
@@ -311,6 +365,8 @@ class ContextBuilder:
             packet_id=f"ctx-{uuid.uuid4().hex[:8]}",
             anchor_uri=anchor_uri,
             anchor_type=anchor_type,
+            task_request=task_request,
+            task_type=task_type,
         )
 
         visited: dict[str, int] = {anchor_uri: 0}   # uri → depth
@@ -351,7 +407,7 @@ class ContextBuilder:
             packet.included[ent_uri] = reason
 
         packet.depth_used = self.max_depth
-        self._collect_databook_fragments(packet)
+        self._inject_databooks(packet, task_request, task_type)
         self._build_summaries(packet)
         packet.token_estimate = self._estimate_tokens(packet)
 
@@ -376,26 +432,38 @@ class ContextBuilder:
                 return str(t).split("/")[-1].split("#")[-1]
         return "Entity"
 
-    def _collect_databook_fragments(self, packet: ContextPacket) -> None:
-        seen: set[str] = set()
-        for r in packet.records:
-            if r.p == str(RDF.type) and r.o.endswith("Databook"):
-                db_uri = r.s
-                if db_uri in seen:
-                    continue
-                seen.add(db_uri)
-                frag: dict = {"uri": db_uri}
-                for rec in packet.records:
-                    if rec.s != db_uri:
-                        continue
-                    if rec.p == str(DB.title):
-                        frag["title"] = rec.o
-                    elif rec.p == str(DB.content):
-                        frag["content_excerpt"] = rec.o[:600] + ("…" if len(rec.o) > 600 else "")
-                    elif rec.p == str(DB.type):
-                        frag["type"] = rec.o
-                if frag.get("title") or frag.get("content_excerpt"):
-                    packet.databook_fragments.append(frag)
+    def _inject_databooks(self, packet: ContextPacket,
+                          task_request: str | None,
+                          task_type: str | None) -> None:
+        """Select and inject databook fragments using DatabookSelector.
+
+        Budget: _DATABOOK_BUDGET_RATIO of max_tokens.
+        If the candidate set exceeds that budget, DatabookSelector switches
+        to relevance-based chunking keyed on task_request.
+        """
+        from context.databook_selector import DatabookSelector
+
+        databook_budget = int(self.max_tokens * self._DATABOOK_BUDGET_RATIO)
+        selector = DatabookSelector(self.store)
+        frags, was_chunked = selector.select_relevant(
+            task_request=task_request,
+            task_type=task_type,
+            token_budget=databook_budget,
+        )
+
+        # Merge: BFS may have already pulled in databooks linked from the
+        # anchor — keep those for provenance, add selector results for the rest.
+        existing_uris = {f["uri"] for f in packet.databook_fragments}
+        for frag in frags:
+            if frag["uri"] not in existing_uris:
+                packet.databook_fragments.append(frag)
+
+        if was_chunked:
+            packet.decomposition_hint = (
+                f"Databook content was chunked to fit {databook_budget}-token budget "
+                f"({len(frags)} databooks selected). "
+                "If key context is missing, narrow the task scope or request a specific layer."
+            )
 
     def _build_summaries(self, packet: ContextPacket) -> None:
         types: dict[str, str] = {}

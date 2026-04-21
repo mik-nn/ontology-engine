@@ -45,10 +45,16 @@ class DocSync:
         uri = URIRef(entity_uri)
         return self._sync_databook(uri)
 
+    # Paths that are read-only source material — never sync these back to docs/databooks/
+    _SOURCE_PATH_SEGMENTS = ("docs-guides-", "docs/guides/")
+
     def _find_databooks(self) -> list[URIRef]:
         from rdflib import RDF
         uris = []
         for s in self.store._g.subjects(RDF.type, DB.Databook):
+            uri_str = str(s)
+            if any(seg in uri_str for seg in self._SOURCE_PATH_SEGMENTS):
+                continue   # skip source-material nodes; they must not overwrite databooks
             uris.append(s)
         return uris
 
@@ -66,30 +72,58 @@ class DocSync:
         created  = val(DB.created)
         content  = val(DB.content)
         transformer = val(DB.transformer)
+        scope    = val(DB.scope)
+        layer    = val(DB.layer)
+        hierarchy_v = g.value(uri, DB.hierarchy)
+        task_type = val(DB.taskType)
+        depends_on = [str(o) for o in g.objects(uri, DB.dependsOn)]
 
         if not (db_id and title):
             return None
 
-        slug = db_id.replace(":", "_").replace("/", "_")
+        slug = _make_slug(db_id)
         out_path = DOCS_DIR / f"{slug}.md"
 
-        meta: dict = {
-            "id": db_id,
-            "title": title,
-        }
+        db_meta: dict = {"id": db_id, "title": title}
         if version:
-            meta["version"] = version
+            db_meta["version"] = version
         if db_type:
-            meta["type"] = db_type
+            db_meta["type"] = db_type
+        if scope:
+            db_meta["scope"] = scope
+        if layer:
+            db_meta["layer"] = layer
+        if hierarchy_v is not None:
+            db_meta["hierarchy"] = int(hierarchy_v)
+        if task_type:
+            db_meta["task_types"] = [t.strip() for t in task_type.split(",") if t.strip()]
+        if depends_on:
+            db_meta["depends_on"] = sorted(depends_on)
         if created:
-            meta["created"] = created
+            db_meta["created"] = created
         if transformer:
-            meta["process"] = {"transformer": transformer}
+            db_meta["process"] = {"transformer": transformer}
+        db_meta["synced_at"] = datetime.now(timezone.utc).isoformat()
 
-        meta["synced_at"] = datetime.now(timezone.utc).isoformat()
+        frontmatter = yaml.dump(
+            {"databook": db_meta}, allow_unicode=True, default_flow_style=False
+        ).strip()
 
-        frontmatter = yaml.dump(meta, allow_unicode=True, default_flow_style=False).strip()
-        body = content or f"# {title}\n\n*Synced from ontology graph.*\n"
+        # Body resolution: always prefer the longer version (disk > graph).
+        # This preserves human edits and restored guide content over the
+        # graph's potentially-stale snapshot.
+        graph_body = _strip_frontmatter(content) if content else ""
+        if out_path.exists():
+            existing = out_path.read_text(encoding="utf-8")
+            disk_body = _strip_frontmatter(existing)
+            body = disk_body if len(disk_body) >= len(graph_body) else graph_body
+        else:
+            body = graph_body
+
+        if not body.strip():
+            body = f"# {title}\n\n*Synced from ontology graph.*\n"
+        elif not body.lstrip().startswith('#'):
+            body = f"# {title}\n\n{body}"
 
         text = f"---\n{frontmatter}\n---\n\n{body}\n"
         out_path.write_text(text, encoding="utf-8")
@@ -103,3 +137,27 @@ class DocSync:
         )
 
         return str(out_path)
+
+
+def _make_slug(db_id: str) -> str:
+    """Convert a Databook id to a safe filesystem slug."""
+    import re
+    s = db_id.strip()
+    s = re.sub(r"[^\w\s.\-]", "-", s)   # replace all non-slug chars with hyphens
+    s = re.sub(r"\s+", "-", s)           # spaces → hyphens
+    s = re.sub(r"-{2,}", "-", s)         # collapse multiple hyphens
+    s = s.strip("-")
+    return s[:100]
+
+
+def _strip_frontmatter(content: str) -> str:
+    """Return markdown body with all leading YAML frontmatter blocks removed."""
+    lines = content.split('\n')
+    last_sep = -1
+    for i, line in enumerate(lines[:150]):
+        if line.strip() == '---':
+            last_sep = i
+    if last_sep >= 0:
+        body = '\n'.join(lines[last_sep + 1:])
+        return body.lstrip('\n')
+    return content

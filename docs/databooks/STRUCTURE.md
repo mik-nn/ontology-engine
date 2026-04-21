@@ -1,19 +1,16 @@
 ---
-created: '2024-04-20'
-id: STRUCTURE
-synced_at: '2026-04-20T17:22:12.224058+00:00'
-title: STRUCTURE
-type: plain-doc
-version: '0.1'
----
-
----
-created: '2024-04-20'
-id: STRUCTURE
-synced_at: '2026-04-20T17:20:05.302463+00:00'
-title: STRUCTURE
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-18'
+  hierarchy: 3
+  id: STRUCTURE
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:14.849395+00:00'
+  title: Structure
+  type: plain-doc
+  version: '0.1'
 ---
 
 # Codebase Structure
@@ -32,4 +29,45 @@ List only meaningful top-level directories and files.
 
 - Main runtime entry: [FILE]
 - Secondary entry points (worker/cli/jobs): [FILES or NONE]
-- How entry is selected (sc
+- How entry is selected (script/config): [NOTE]
+
+### 3) Module Boundaries
+
+| Boundary | What belongs here | What must not be here |
+|----------|-------------------|------------------------|
+| [module/layer] | [responsibility] | [forbidden logic] |
+
+### 4) Naming and Organization Rules
+
+- File naming pattern: [kebab/camel/Pascal + examples]
+- Directory organization pattern: [feature/layer/domain]
+- Import aliasing or path conventions: [RULE]
+
+### 5) Evidence
+
+- [path/to/root-tree-source]
+- [path/to/entry-config]
+- [path/to/key-module]
+
+## Extended Sections (Optional)
+
+Add only when repository complexity requires it:
+
+- Subdirectory deep maps by feature/layer
+- Middleware/boot order details
+- Generated-vs-source layout boundaries
+- Monorepo workspace-level structure maps
+
+
+
+
+
+
+
+
+
+
+
+
+
+

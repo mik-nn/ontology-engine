@@ -1,20 +1,19 @@
 ---
-created: '2024-04-20'
-id: requires
-synced_at: '2026-04-20T17:22:18.109993+00:00'
-title: requires
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-21'
+  hierarchy: 3
+  id: requires
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:10.289095+00:00'
+  title: Requires
+  type: plain-doc
+  version: '0.1'
 ---
 
----
-created: '2024-04-20'
-id: requires
-synced_at: '2026-04-20T17:19:59.699032+00:00'
-title: requires
-type: plain-doc
-version: '0.1'
----
+# Requires
 
 typer>=0.12
 rich>=13
@@ -31,5 +30,15 @@ litellm>=1.40
 
 [litellm]
 litellm>=1.40
+
+
+
+
+
+
+
+
+
+
 
 

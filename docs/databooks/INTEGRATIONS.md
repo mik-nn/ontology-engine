@@ -1,10 +1,16 @@
 ---
-created: '2024-04-20'
-id: INTEGRATIONS
-synced_at: '2026-04-20T17:22:15.580167+00:00'
-title: INTEGRATIONS
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-18'
+  hierarchy: 3
+  id: INTEGRATIONS
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:14.569283+00:00'
+  title: Integrations
+  type: plain-doc
+  version: '0.1'
 ---
 
 # External Integrations
@@ -21,4 +27,50 @@ version: '0.1'
 
 | Store | Role | Access layer | Key risk | Evidence |
 |-------|------|--------------|----------|----------|
-| [db/cache/etc] | [role] | [module] | [risk] | 
+| [db/cache/etc] | [role] | [module] | [risk] | [file] |
+
+### 3) Secrets and Credentials Handling
+
+- Credential sources: [env/secrets manager/config]
+- Hardcoding checks: [result]
+- Rotation or lifecycle notes: [known/unknown]
+
+### 4) Reliability and Failure Behavior
+
+- Retry/backoff behavior: [implemented/none/partial]
+- Timeout policy: [where configured]
+- Circuit-breaker or fallback behavior: [if any]
+
+### 5) Observability for Integrations
+
+- Logging around external calls: [yes/no + where]
+- Metrics/tracing coverage: [yes/no + where]
+- Missing visibility gaps: [list]
+
+### 6) Evidence
+
+- [path/to/integration-wrapper]
+- [path/to/config-or-env-template]
+- [path/to/monitoring-or-logging-config]
+
+## Extended Sections (Optional)
+
+Add only when needed:
+
+- Endpoint-by-endpoint catalog
+- Auth flow sequence diagrams
+- SLA/SLO per integration
+- Region/failover topology notes
+
+
+
+
+
+
+
+
+
+
+
+
+

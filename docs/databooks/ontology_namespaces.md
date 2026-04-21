@@ -1,35 +1,18 @@
 ---
-created: '2026-04-18'
-id: ontology_namespaces
-process:
-  transformer: human
-synced_at: '2026-04-20T12:00:07.540097+00:00'
-title: Ontology Namespace Reference
-type: reference
-version: 1.1.0
----
-
 databook:
+  created: '2026-04-18'
+  hierarchy: 0
   id: ontology_namespaces
-  title: "Ontology Namespace Reference"
-  version: 1.1.0
-  type: reference
-  domain: ontology-engine
-  status: active
-  created: 2026-04-18
-  updated: 2026-04-18
-  author:
-    - name: Michael
-      iri: https://ontologist.ai/agents/michael
+  layer: reference
   process:
     transformer: human
-    inputs: []
-  license: CC-BY-4.0
-  tags:
-    - ontology
-    - namespaces
-    - rdf
+  scope: permanent
+  synced_at: '2026-04-21T14:10:41.547808+00:00'
+  title: Ontology Namespace Reference
+  type: reference
+  version: 1.1.0
 ---
+
 # Ontology Namespace Reference
 
 Ground truth: https://ontologist.ai/ns/ (The Ontologist — see archive)
@@ -59,4 +42,57 @@ Ground truth: https://ontologist.ai/ns/ (The Ontologist — see archive)
 | Class | Stage | Description |
 |---|---|---|
 | `oe:ProjectHolon` | 1 | Top-level project container |
-| `oe:ModuleHolon`, `oe:CodeModule`, `oe:DataModule`, `oe:ServiceModule`, `oe:ConfigModule` | 2 | Code struc
+| `oe:ModuleHolon`, `oe:CodeModule`, `oe:DataModule`, `oe:ServiceModule`, `oe:ConfigModule` | 2 | Code structure |
+| `oe:TaskHolon`, `oe:AnalysisTask`, `oe:DesignTask`, `oe:ExplainTask`, `oe:ImplementTask`, `oe:RefactorTask` | 7 | Task types |
+| `oe:Plan`, `oe:Subtask` | 7 | Planning |
+| `oe:Event` + 12 subclasses | 8 | Pipeline events (event-first model) |
+
+### Build (`build:`)
+- `build:PythonPackage`, `build:Stage`, `build:Target`, `build:Source`
+- `build:name`, `build:version`, `build:requiredBy`, `build:dependsOn`
+
+### Databook (`db:`)
+- `db:Databook` (subClassOf `prov:Entity`)
+- Required properties: `id`, `title`, `version`, `type`, `created`, `content`
+- Optional: `transformer` (one of: `human`, `llm`, `sparql`, `xslt`), `license`, `authorName`, `authorIRI`, `processInput`
+
+## Canonical DataBook Frontmatter
+
+```yaml
+databook:
+  id: <string>
+  title: <string>
+  version: <semver>
+  type: <string>
+  created: <YYYY-MM-DD>
+  author:
+    - name: <string>
+      iri: <URI>
+  process:
+    transformer: human | llm | sparql | xslt
+    inputs: [<URI>, ...]
+  license: <SPDX-identifier>
+  tags: [<string>, ...]
+```
+
+## Event-First Modeling Rule
+
+Before adding a predicate to the ontology, apply the four-question test (from ground truth):
+
+1. Does the relation carry **provenance** (who asserted it)?
+2. Does it carry **temporality** (valid from/until)?
+3. Does it carry **conditionality** (contextual constraints)?
+4. Does it carry **agency** (something happened to create it)?
+
+If any answer is yes → model an `oe:Event` node, not a bare predicate. The predicate becomes a materialised view derived from the event.
+
+
+
+
+
+
+
+
+
+
+

@@ -1,22 +1,40 @@
 ---
-created: '2024-04-20'
-id: stack-detection
-synced_at: '2026-04-20T17:22:18.544409+00:00'
-title: stack-detection
-type: plain-doc
-version: '0.1'
+databook:
+  created: '2026-04-18'
+  hierarchy: 3
+  id: stack-detection
+  layer: meta
+  process:
+    transformer: human
+  scope: project
+  synced_at: '2026-04-21T14:11:13.650830+00:00'
+  title: Stack Detection
+  type: plain-doc
+  version: '0.1'
 ---
 
-# Stack Detection Reference
+## Docker Base Image → Runtime
 
-Load this file when the tech stack is ambiguous — e.g., multiple manifest files present, unfamiliar file extensions, or no obvious `package.json` / `go.mod`.
+If no manifest file is present but a `Dockerfile` exists, the `FROM` line reveals the runtime:
 
----
+| FROM line pattern | Runtime |
+|------------------|---------|
+| `FROM node:X` | Node.js X |
+| `FROM python:X` | Python X |
+| `FROM golang:X` | Go X |
+| `FROM eclipse-temurin:X` | Java X (Eclipse Temurin JDK) |
+| `FROM mcr.microsoft.com/dotnet/aspnet:X` | .NET X |
+| `FROM ruby:X` | Ruby X |
+| `FROM rust:X` | Rust X |
+| `FROM alpine` (alone) | Check what's installed via `RUN apk add` |
 
-## Manifest File → Ecosystem
 
-| File | Ecosystem | Key fields to read |
-|------|-----------|--------------------|
-| `package.json` | Node.js / JavaScript / TypeScript | `dependencies`, `devDependencies`, `scripts`, `main`, `type`, `engines` |
-| `go.mod` | Go | Module path, Go version, `require` block |
-| `
+
+
+
+
+
+
+
+
+
